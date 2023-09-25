@@ -1,28 +1,28 @@
 # Script to generate the meta data file that is stored with each experiment.
 #
 # Meta data file definition: (these fields are required)
-# general:
-# - ID
-# - Date time
+# General:
+# - Id
+# - Date_time
 # - Platform
 # - Node_list
 # - number of Nodes
 # - number of tasks
 # 
-# benchmark:
-# - name
-# - version
-# - git commit id
-# - git origin
+# Benchmark:
+# - Name
+# - Version
+# - Git commit id
+# - Git origin
 # 
-# hemocell:
-# - version
-# - git link
-# - git commit
+# Hemocell:
+# - Version
+# - Git link
+# - Git commit
 # 
-# ear:
-# - policy
-# - files
+# Ear:
+# - Policy
+# - Files
 
 import argparse
 import os
@@ -41,9 +41,9 @@ def gen_hemocell(dir_name):
     """
     d = {}
 
-    d['git_commit'] = run_shell_cmd("git rev-parse HEAD", dir_name).strip()
-    d['git_origin'] = run_shell_cmd("git ls-remote --get-url origin", dir_name).strip()
-    d['version'] = run_shell_cmd("git tag -l", dir_name).strip().split('\n')[-1]
+    d['Git_commit'] = run_shell_cmd("git rev-parse HEAD", dir_name).strip()
+    d['Git_origin'] = run_shell_cmd("git ls-remote --get-url origin", dir_name).strip()
+    d['Version'] = run_shell_cmd("git tag -l", dir_name).strip().split('\n')[-1]
 
     return d
 
@@ -51,7 +51,7 @@ def gen_ear():
     
     d = {}
 
-    d['policy'] = "monitoring"
+    d['Policy'] = "monitoring"
 
     return d
 
@@ -61,12 +61,12 @@ def gen_general(args):
 
     d = {}
 
-    d['id'] = args.id
-    d['platform'] = args.platform
-    d['date'] = now.strftime("%Y-%m-%d %H:%M")
-    d['node_list'] = os.getenv("SLURM_JOB_NODELIST")
-    d['tasks'] = os.getenv("SLURM_NTASKS")
-    d['nodes'] = os.getenv("SLURM_NNODES")
+    d['Id'] = args.id
+    d['Platform'] = args.platform
+    d['Date'] = now.strftime("%Y-%m-%d %H:%M")
+    d['Node_list'] = os.getenv("SLURM_JOB_NODELIST")
+    d['Tasks'] = os.getenv("SLURM_NTASKS")
+    d['Nodes'] = os.getenv("SLURM_NNODES")
 
     return d
 
@@ -80,8 +80,8 @@ def gen_benchmark(dir_name):
     with open(dir_name + '/meta.yml') as f:
         d = yaml.load(f, Loader=yaml.FullLoader)
 
-    d['git_commit'] = run_shell_cmd("git rev-parse HEAD", dir_name).strip()
-    d['git_origin'] = run_shell_cmd("git ls-remote --get-url origin", dir_name).strip()
+    d['Git_commit'] = run_shell_cmd("git rev-parse HEAD", dir_name).strip()
+    d['Git_origin'] = run_shell_cmd("git ls-remote --get-url origin", dir_name).strip()
 
     return d
 
@@ -97,10 +97,10 @@ def main():
     args = parser.parse_args()
 
     meta_dict = {}
-    meta_dict['general'] = gen_general(args);
-    meta_dict['benchmark'] = gen_benchmark(args.benchmark_dir);
-    meta_dict['hemocell'] = gen_hemocell(args.hemocell_dir);
-    meta_dict['ear'] = gen_ear();
+    meta_dict['General'] = gen_general(args);
+    meta_dict['Benchmark'] = gen_benchmark(args.benchmark_dir);
+    meta_dict['Hemocell'] = gen_hemocell(args.hemocell_dir);
+    meta_dict['Ear'] = gen_ear();
     meta_dict_yaml = yaml.dump(meta_dict, sort_keys=False)
 
     with open(args.out_file, "w") as text_file:
