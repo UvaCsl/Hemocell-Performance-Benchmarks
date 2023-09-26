@@ -14,7 +14,7 @@ For more information on Hemocell please go to [hemocell.eu](https://hemocell.eu/
 3. Benchmarks can now be compiled using the same procedure as normal cases.
 
 
-## Setup an benchmark
+## Setup a benchmark
 Every benchmark lives in its own folder, and is setup the same as any other hemocell case.
 
 Every benchmark folder must conatin a meta.yml file. This file contains information regarding the benchmark that will be stored for every experimint that is done with it.
