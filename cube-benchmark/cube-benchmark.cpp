@@ -208,53 +208,53 @@ int main(int argc, char *argv[]) {
    * Not very efficiant, but should not have to be run often so probably not a big problem (yet).
    */
   //std::vector<PeriodicOverlap3D> overlapsP = hemocell.lattice->getMultiBlockManagement().getLocalInfo().getPeriodicOverlaps();
-  std::vector<Overlap3D> overlaps = hemocell.lattice->getMultiBlockManagement().getLocalInfo().getNormalOverlaps();
-  std::fstream sout;
-  string filename;
-  try {
-   filename = plb::global::directories().getLogOutDir() + (*cfg)["profiler"]["neighbourFile"].read<string>();
-  } catch (...) {
-   filename = plb::global::directories().getLogOutDir() + "neighbours.neighbours";
-  }
+  // std::vector<Overlap3D> overlaps = hemocell.lattice->getMultiBlockManagement().getLocalInfo().getNormalOverlaps();
+  // std::fstream sout;
+  // string filename;
+  // try {
+  //  filename = plb::global::directories().getLogOutDir() + (*cfg)["profiler"]["neighbourFile"].read<string>();
+  // } catch (...) {
+  //  filename = plb::global::directories().getLogOutDir() + "neighbours.neighbours";
+  // }
 
-  bool opened = false;
-  int turn = 0;
+  // bool opened = false;
+  // int turn = 0;
 
-  while (turn < plb::global::mpi().getSize()) {
-    if (turn == plb::global::mpi().getRank()) {
-      sout.open(filename,std::fstream::app);
-      if (!sout.is_open()) {
-        std::cout << "(Profiler) (Error) Opening" << filename << std::endl;
-      } else {
-        opened = true;
-        sout << plb::global::mpi().getRank() << " (";
-        for(int tmpi = 0; tmpi < (int) hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks().size(); tmpi++) sout << hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks()[tmpi];
-        sout << ") ";
+  // while (turn < plb::global::mpi().getSize()) {
+  //   if (turn == plb::global::mpi().getRank()) {
+  //     sout.open(filename,std::fstream::app);
+  //     if (!sout.is_open()) {
+  //       std::cout << "(Profiler) (Error) Opening" << filename << std::endl;
+  //     } else {
+  //       opened = true;
+  //       sout << plb::global::mpi().getRank() << " (";
+  //       for(int tmpi = 0; tmpi < (int) hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks().size(); tmpi++) sout << hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks()[tmpi];
+  //       sout << ") ";
 
-        for(int tmpi = 0 ; tmpi < (int)overlaps.size(); tmpi++){
-                bool self = false;
+  //       for(int tmpi = 0 ; tmpi < (int)overlaps.size(); tmpi++){
+  //               bool self = false;
 
-                for (int tmpj = 0; tmpj < (int) hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks().size(); tmpj++) {
-                        if (overlaps[tmpi].getOriginalId() == hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks()[tmpj]){
-                                self = true;
-                                break;
-                        }
-                }
+  //               for (int tmpj = 0; tmpj < (int) hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks().size(); tmpj++) {
+  //                       if (overlaps[tmpi].getOriginalId() == hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks()[tmpj]){
+  //                               self = true;
+  //                               break;
+  //                       }
+  //               }
 
-                if (self) sout << " " << overlaps[tmpi].getOverlapId();
-        }
+  //               if (self) sout << " " << overlaps[tmpi].getOverlapId();
+  //       }
 
 
-        sout << endl;
+  //       sout << endl;
 
-      }
-      if (opened) {
-        sout.close();
-      }
-    }
-    plb::global::mpi().barrier();
-    turn++;
-  }
+  //     }
+  //     if (opened) {
+  //       sout.close();
+  //     }
+  //   }
+  //   plb::global::mpi().barrier();
+  //   turn++;
+  // }
 
   hlog << "(main) Simulation finished :) " << endl;
   return 0;
