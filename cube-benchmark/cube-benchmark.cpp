@@ -38,8 +38,6 @@ typedef double T;
 
 using namespace hemo;
 
-map<plint, plint> BlockToMpi;
-
 int main(int argc, char *argv[]) {
   if (argc < 2) {
     cout << "Usage: " << argv[0] << " <configuration.xml>" << endl;
@@ -67,7 +65,7 @@ int main(int argc, char *argv[]) {
   param::lbm_shear_parameters((*cfg), nz);
   param::printParameters();
 
-    hlog << "(unbounded) (Fluid) Initializing Palabos Fluid Field" << endl;
+  hlog << "(unbounded) (Fluid) Initializing Palabos Fluid Field" << endl;
   hemocell.initializeLattice(defaultMultiBlockPolicy3D().getMultiBlockManagement(nx, ny, nz, (*cfg)["domain"]["fluidEnvelope"].read<int>()));
 
   OnLatticeBoundaryCondition3D<T,DESCRIPTOR>* boundaryCondition

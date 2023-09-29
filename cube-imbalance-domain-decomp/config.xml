@@ -31,7 +31,10 @@
 <sim>
     <tmax> 3000 </tmax> <!-- total number of iterations -->
     <tmeas> 10000 </tmeas> <!-- interval after which data is written -->
-    <tslice> 200 </tslice>
 </sim>
+
+<benchmark>
+    <tslice> 200 </tslice>
+</benchmark>
 
 </hemocell>

@@ -27,3 +27,15 @@ Any additional information is allowd, but keep in mind it will be copied for eve
 
 
 Additionaly a README.md should be added to every benchmark to provide more information.
+
+TODO
+- benchmark
+
+
+## Performance Monitoring
+- Profiler
+- SCOREP
+    - filter
+    - slice
+    - how to disable
+- ear
