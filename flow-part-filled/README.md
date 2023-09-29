@@ -7,4 +7,4 @@ This will create dynamic changing load imbalance.
 
 A visual representation of the cube imbalance hemocell setup
 
-![ ](part-filled.png  "part filled example")
+![ ](cube-part-filled.png  "part filled example")
