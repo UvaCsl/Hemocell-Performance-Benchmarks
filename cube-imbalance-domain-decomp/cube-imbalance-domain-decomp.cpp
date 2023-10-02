@@ -32,7 +32,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "palabos3D.h"
 #include "palabos3D.hh"
 
+#ifdef SCOREP_USER_ENABLE
 #include <scorep/SCOREP_User.h>
+#else // SCOREP_USER_ENABLE
+
+/* **************************************************************************************
+ * Empty macros, if user instrumentation is disabled
+ * *************************************************************************************/
+#define SCOREP_USER_REGION_BEGIN( handle, name, type )
+#define SCOREP_USER_REGION_END( handle )
+#define SCOREP_USER_REGION_DEFINE( handle )
+#define SCOREP_USER_REGION_TYPE_DYNAMIC 1
+
+
+#endif // SCOREP_USER_ENABLE
 
 typedef double T;
 
