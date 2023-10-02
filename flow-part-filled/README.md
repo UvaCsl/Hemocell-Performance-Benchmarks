@@ -1,5 +1,5 @@
-[!NOTE]  
-This folder is a place holder. This benchmark is not yet up and running.
+> [!NOTE]
+> This folder is a place holder. This benchmark is not yet up and running.
 
 # Cube
 In this benchmark, part of the domain is filled with RBCs.
