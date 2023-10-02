@@ -3,6 +3,8 @@ A repository to keep track of Hemocell performance benchmarks
 
 For more information on Hemocell please go to [hemocell.eu](https://hemocell.eu/)
 
+Mandatory extra files required for running hemocell can be found in `/misc`.
+
 ## How to use
 1. Clone this repository in the hemocell root directory
 2. Add the following lines to the bottom of the CMakelist.txt file. Change the folder name if necessary.
