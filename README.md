@@ -12,6 +12,7 @@ For more information on Hemocell please go to [hemocell.eu](https://hemocell.eu/
   endif()
   ```
 3. Benchmarks can now be compiled using the same procedure as normal cases.
+    - Rerun CMAKE in `hemocell/build`
 
 
 ## Setup a benchmark
