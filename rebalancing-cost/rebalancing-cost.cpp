@@ -54,6 +54,7 @@ typedef double T;
 
 using namespace hemo;
 
+
 int main(int argc, char *argv[]) {
   if (argc < 2) {
     cout << "Usage: " << argv[0] << " <configuration.xml>" << endl;
@@ -90,6 +91,7 @@ int main(int argc, char *argv[]) {
   param::printParameters();
 
   hlog << "(unbounded) (Fluid) Initializing Palabos Fluid Field" << endl;
+  map<plint, plint> BlockToMpi;
   if (imbalance == 0) {
     hemocell.initializeLattice(defaultMultiBlockPolicy3D().getMultiBlockManagement(nx, ny, nz, (*cfg)["domain"]["fluidEnvelope"].read<int>()));
   } else {
@@ -221,6 +223,12 @@ int main(int argc, char *argv[]) {
       SCOREP_USER_REGION_END(my_region)
       SCOREP_USER_REGION_BEGIN(my_region, "iteration-bin", SCOREP_USER_REGION_TYPE_DYNAMIC)
     }
+
+    if((int)(tmax / 2) == (int)hemocell.iter){
+      hlog << "dolaodbalance" << endl;
+      hemocell.loadBalancer->doLoadBalance();
+    }
+
 
     if (hemocell.iter % tmeas == 0) {
       hlog << "(main) Stats. @ " << hemocell.iter << " ("
