@@ -5,7 +5,17 @@ For more information on Hemocell please go to [hemocell.eu](https://hemocell.eu/
 
 Mandatory extra files required for running hemocell can be found in `/misc`.
 
-## How to use
+## Benchmarks
+| Name                         	| Description                                                                                                                                                                       	| Status             	|
+|------------------------------	|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	|--------------------	|
+| Cube-Benchmark               	| The default cube example, a cubic volume of blood with a shear force applied to the top and bottom. This benchmark is used as basis for the other cube benchmarks.                	| :white_check_mark: 	|
+| cube-imbalance-domain-decomp 	| A benchmark where workload imbalance is introduced in the cube case. Through domain decomposition, half of the available process are given 2 times more work than the other half. 	| :white_check_mark: 	|
+| cube-imbalance-hemo          	| A benchmark where workload imbalance is introduced by having an imbalanced RBC distribution. Imbalanced distribution is created through the RBC.pos files.                        	| :white_check_mark: 	|
+| flow-part-filled             	| A benchmark with a flow direction. A cluster of RBCs moves through the domain, which creates dynamically changing workload distribution.                                          	| :red_circle:       	|
+
+## Instructions
+
+### How to use
 1. Clone this repository in the hemocell root directory
 2. Add the following lines to the bottom of the CMakelist.txt file. Change the folder name if necessary.
   ```
@@ -17,7 +27,7 @@ Mandatory extra files required for running hemocell can be found in `/misc`.
     - Rerun CMAKE in `hemocell/build`
 
 
-## Setup a benchmark
+### Setup a benchmark
 Every benchmark lives in its own folder, and is set up the same as any other hemocell case.
 
 Every benchmark folder must contain a meta.yml file. This file contains information regarding the benchmark that will be stored for every experiment that is done with it.
