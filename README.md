@@ -11,7 +11,7 @@ Mandatory extra files required for running hemocell can be found in `/misc`.
 | Cube-Benchmark               	| The default cube example, a cubic volume of blood with a shear force applied to the top and bottom. This benchmark is used as basis for the other cube benchmarks.                	| :white_check_mark: 	|
 | cube-imbalance-domain-decomp 	| A benchmark where workload imbalance is introduced in the cube case. Through domain decomposition, half of the available process are given 2 times more work than the other half. 	| :white_check_mark: 	|
 | cube-imbalance-hemo          	| A benchmark where workload imbalance is introduced by having an imbalanced RBC distribution. Imbalanced distribution is created through the RBC.pos files.                        	| :white_check_mark: 	|
-| rebalancing-cost             	| A benchmark for measuring the cost of rebalancing the workload, based on the cube-benchmark.                                                                                       	| :red_circle:       	|
+| rebalancing-cost             	| A benchmark for measuring the cost of rebalancing the workload, based on the cube-benchmark.                                                                                       	| :white_check_mark: 	|
 | flow-part-filled             	| A benchmark with a flow direction. A cluster of RBCs moves through the domain, which creates dynamically changing workload distribution.                                          	| :red_circle:       	|
 
 ## Instructions
