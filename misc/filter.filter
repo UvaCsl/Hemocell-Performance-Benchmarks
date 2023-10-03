@@ -17,4 +17,5 @@ INCLUDE *hemo::HemoCellFields::spreadParticleForce*
 INCLUDE *main(int, char*
 INCLUDE *slice*
 INCLUDE *doLoadBalance*
+INCLUDE *new_attribution_parmetis*
 SCOREP_REGION_NAMES_END
