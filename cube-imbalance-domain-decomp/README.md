@@ -1,9 +1,5 @@
-# cube imbalance domain decomposition
+xml files that descibe the shape of the particles.
+empty pos file for the platelets.
+empty pos file for the RBCs (RBC-h000.pos)
 
-Benchmark where incorrect domain decomposition causes load imbalance.
-
-##
-In the current version of the benchmark, the number of atomic blocks generated is three times the number of processes.
-The first two-thirds of blocks are given to the first half of the available processes. 
-![ ](imbalance-domain.png  "Imbalance domain visual representation")
-In this examples the red subdomain is assigned to half the available processes, and the blue part is assigned to the other half.
+RBC-h018.pos: is a file with 18% hematocrit, where all the RBCs are evenly divided along the domain. This file fills a domain up-to 800x800x800 LU. 

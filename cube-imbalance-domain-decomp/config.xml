@@ -34,7 +34,7 @@
 </sim>
 
 <benchmark>
-    <tslice> 200 </tslice>
+    <binSize> 200 </binSize>
 </benchmark>
 
 </hemocell>
