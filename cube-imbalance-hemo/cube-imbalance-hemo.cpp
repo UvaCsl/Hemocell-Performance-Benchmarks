@@ -219,7 +219,7 @@ int main(int argc, char *argv[]) {
   // hemo::global.statistics.outputStatistics(batchsize);
 
   hemo::global.statistics.printStatistics();
-  hemo::global.statistics.outputStatistics();
+  hemo::global.statistics.outputStatistics(128);
 
   WRITE_OUTPUT()
 
