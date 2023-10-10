@@ -29,7 +29,7 @@
 </domain>
 
 <sim>
-    <tmax> 3000 </tmax> <!-- total number of iterations -->
+    <tmax> 5 </tmax> <!-- total number of iterations -->
     <tmeas> 10000 </tmeas> <!-- interval after which data is written -->
 </sim>
 
