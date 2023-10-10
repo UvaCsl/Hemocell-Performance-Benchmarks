@@ -1,11 +1,5 @@
-# Cube
-This a default case that is used as a basis for other benchmarks.
-Load is as balanced as possible in this case (if the RBC positions are regular).
+xml files that descibe the shape of the particles.
+empty pos file for the platelets.
+empty pos file for the RBCs (RBC-h000.pos)
 
-If no special block size is given the domain decomposition will generate one block per process.
-
-##
-
-A visual representation of the cube-benchmark setup
-
-![ ](Cube-example.png  "Cube example")
+RBC-h018.pos: is a file with 18% hematocrit, where all the RBCs are evenly divided along the domain. This file fills a domain up-to 800x800x800 LU. 

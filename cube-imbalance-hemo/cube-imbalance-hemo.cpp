@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "palabos3D.h"
 #include "palabos3D.hh"
 
+
 #ifdef SCOREP_USER_ENABLE
 #include <scorep/SCOREP_User.h>
 #else // SCOREP_USER_ENABLE
@@ -44,8 +45,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define SCOREP_USER_REGION_DEFINE( handle )
 #define SCOREP_USER_REGION_TYPE_DYNAMIC 1
 
-
 #endif // SCOREP_USER_ENABLE
+
+#define WRITE_OUTPUT() if(writeOutput) { hemocell.writeOutput(); }
+
 
 typedef double T;
 
@@ -67,6 +70,12 @@ int main(int argc, char *argv[]) {
   } catch (...) {
     bin_size = (*cfg)["sim"]["tmax"].read<int>() + 1;
   }
+
+  bool writeOutput = 1;
+  try {
+    writeOutput = (*cfg)["benchmark"]["writeOutput"].read<int>();
+  } catch (...) {}
+
 
   // number of cells along each axis
   int nx, ny, nz;
@@ -146,7 +155,7 @@ int main(int argc, char *argv[]) {
   // loading the cellfield
   if (not cfg->checkpointed) {
     hemocell.loadParticles();
-    hemocell.writeOutput();
+    WRITE_OUTPUT();
   } else {
     hemocell.loadCheckPoint();
   }
@@ -197,7 +206,7 @@ int main(int argc, char *argv[]) {
            << " m/s, mean: " << finfo.avg * toMpS
            << " m/s, rel. app. viscosity: "
            << (param::u_lbm_max * 0.5) / finfo.avg << endl;
-      hemocell.writeOutput();
+      WRITE_OUTPUT()
     }
   }
 
@@ -212,7 +221,7 @@ int main(int argc, char *argv[]) {
   hemo::global.statistics.printStatistics();
   hemo::global.statistics.outputStatistics();
 
-  hemocell.writeOutput();
+  WRITE_OUTPUT()
 
   /*
    * Outputs the neighbouring blocks for all processes

@@ -20,8 +20,8 @@
     <dx> 5.0e-7 </dx> <!--Physical length of 1 Lattice Unit -->
     <dt> -1 </dt> <!-- Time step for the LBM system. A negative value will set Tau=1 and calc. the corresponding time-step. -->
     <refDir> 1 </refDir>   <!-- Used for resloution  setting and  Re calculation as well -->
-    <nx> 50 </nx>  <!-- Number of numerical cell in the reference direction -->
-    <ny> 50 </ny>  <!-- Number of numerical cell in the reference direction -->
+    <nx> 25 </nx>  <!-- Number of numerical cell in the reference direction -->
+    <ny> 25 </ny>  <!-- Number of numerical cell in the reference direction -->
     <nz> 50 </nz>  <!-- Number of numerical cell in the reference direction -->
     <blockSize> -1 </blockSize>
     <kBT> 4.100531391e-21 </kBT> <!-- in SI, m2 kg s-2 (or J) for T=300 -->
@@ -29,12 +29,13 @@
 </domain>
 
 <sim>
-    <tmax> 3000 </tmax> <!-- total number of iterations -->
+    <tmax> 1 </tmax> <!-- total number of iterations -->
     <tmeas> 10000 </tmeas> <!-- interval after which data is written -->
 </sim>
 
 <benchmark>
-    <tslice> 200 </tslice>
+    <binSize> 200 </binSize>
+    <writeOutput> 0 </writeOutput>
 </benchmark>
 
 </hemocell>
