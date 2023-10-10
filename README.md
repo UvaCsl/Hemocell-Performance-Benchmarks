@@ -34,7 +34,7 @@ Here we will describe the options used for most/all benchmarks. Some special opt
 ```
 <benchmark>
     <binSize> 200 </binSize> <!----Set the bin size for binning iterarations over time using SCOREP. A higher value will provide less detail, but also less overhead. Default: tmax + 1 --->
-    <writeOutput> 1 </writeOutput <!---Set to 0 if you don't want to write the ouptut of the simulation to hdf5 files, this reduces the diskspace required per experiment. Default: 1.--->
+    <writeOutput> 1 </writeOutput> <!---Set to 0 if you don't want to write the ouptut of the simulation to hdf5 files, this reduces the diskspace required per experiment. Default: 1.--->
 </benchmark>
 ```
 
