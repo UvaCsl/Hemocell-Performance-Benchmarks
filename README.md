@@ -26,6 +26,17 @@ Mandatory extra files required for running hemocell can be found in `/misc`.
   ```
 3. Benchmarks can now be compiled using the same procedure as normal cases.
     - Rerun CMAKE in `hemocell/build`
+  
+### Config.xml options for benchmarks
+Hemocell requires a config file that is used to setup the simulation. Some benchmark specific options can be set using this config file. 
+Here we will describe the options used for most/all benchmarks. Some special options might be availible to specific benchmarks, if this is the case they will be described in the benchmark README.
+
+```
+<benchmark>
+    <binSize> 200 </binSize> <!----Set the bin size for binning iterarations over time using SCOREP. A higher value will provide less detail, but also less overhead. Default: tmax + 1 --->
+    <writeOutput> 1 </writeOutput <!---Set to 0 if you don't want to write the ouptut of the simulation to hdf5 files, this reduces the diskspace required per experiment. Default: 1.--->
+</benchmark>
+```
 
 
 ### Setup a benchmark
