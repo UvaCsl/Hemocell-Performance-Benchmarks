@@ -124,7 +124,7 @@ def main():
     parser.add_argument("-c", "--cubexname", type=str, help="Name of the .cubex output file, default is same as --ouptut option.", default=None)
     parser.add_argument("-s", "--single", action='store_true', help="Set this flag if the given directory is a specific experiment.")
     parser.add_argument("-f", "--force", action='store_true', help="If forces is set it forces the script to regenerated already existing cubex and csv files.")
-    parser.add_argument('--cutpoint', type=str, help="Set a different cutpoint for the cubexfile, if the cutpoint does not exist cubexfile will not be cut", default="void hemo::hemocell::iterate")
+    parser.add_argument('--cutpoint', type=str, help="Set a different cutpoint for the cubexfile, if the cutpoint does not exist cubexfile will not be cut. NOTE: void hemo::loadbalancer::doloadbalance", default="void hemo::hemocell::iterate")
     args = parser.parse_args()
 
     if args.cubexname is None:
