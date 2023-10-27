@@ -36,6 +36,7 @@
 <benchmark>
     <tslice> 200 </tslice>
     <imbalance> 0 </imbalance>
+    <blockMultiply> 1 </blockMultiply>
 </benchmark>
 
 </hemocell>

@@ -80,6 +80,14 @@ int main(int argc, char *argv[]) {
     imbalance = 0;
   }
 
+  int blockMultiply = 1;
+  try { 
+    blockMultiply = (*cfg)["benchmark"]["blockMultiply"].read<int>(); 
+    hlog << "number of block multiply : " << imbalance << endl;
+  } catch (...) {
+    blockMultiply = 1;
+  }
+
   bool writeOutput = 1;
   try {
     writeOutput = (*cfg)["benchmark"]["writeOutput"].read<int>();
@@ -97,12 +105,20 @@ int main(int argc, char *argv[]) {
 
   hlog << "(unbounded) (Fluid) Initializing Palabos Fluid Field" << endl;
   map<plint, plint> BlockToMpi;
+  plint nProcs = global::mpi().getSize();
+  plint nBlocks;
   if (imbalance == 0) {
-    hemocell.initializeLattice(defaultMultiBlockPolicy3D().getMultiBlockManagement(nx, ny, nz, (*cfg)["domain"]["fluidEnvelope"].read<int>()));
-  } else {
-    plint nProcs = global::mpi().getSize();
-    plint nBlocks = nProcs * 2;  
+    nBlocks = nProcs * blockMultiply;
+    hlog << "nblocks " << nBlocks << endl;
+    hlog << "blockMultiply " << blockMultiply << endl;
+    for(int i = 0; i < nProcs; i++){
+      for(int j = 0; j < blockMultiply; j++) {
+        BlockToMpi[(i*blockMultiply) + j] = i;
+      }
+    }
 
+  } else {
+    nBlocks = nProcs * 2;  
     for(int i = 0; i < (nBlocks - (nProcs / 2)); i += 3){
       BlockToMpi[i] = (i / 3) % nProcs;
       BlockToMpi[i + 1] = (i / 3) % nProcs;
@@ -113,22 +129,23 @@ int main(int argc, char *argv[]) {
       BlockToMpi[i] = (i % (nProcs / 2)) + (nProcs / 2);
     }
 
-    MultiBlockManagement3D management = defaultMultiBlockPolicy3D().getMultiBlockManagement(nx, ny, nz, (*cfg)["domain"]["fluidEnvelope"].read<int>());
-
-    SparseBlockStructure3D sb = createRegularDistribution3D(management.getBoundingBox(), nBlocks);
-    ExplicitThreadAttribution * eta = new ExplicitThreadAttribution(BlockToMpi);
-    MultiBlockManagement3D *domain_lattice_management = new MultiBlockManagement3D(sb,eta,management.getEnvelopeWidth(),management.getRefinementLevel());
-
-    hemocell.lattice = new MultiBlockLattice3D<T,DESCRIPTOR>(*domain_lattice_management,
-              defaultMultiBlockPolicy3D().getBlockCommunicator(),
-              defaultMultiBlockPolicy3D().getCombinedStatistics(),
-              defaultMultiBlockPolicy3D().getMultiCellAccess<T, DESCRIPTOR>(),
-              new GuoExternalForceBGKdynamics<T, DESCRIPTOR>(1.0/param::tau));
   }
 
+  MultiBlockManagement3D management = defaultMultiBlockPolicy3D().getMultiBlockManagement(nx, ny, nz, (*cfg)["domain"]["fluidEnvelope"].read<int>());
 
-  OnLatticeBoundaryCondition3D<T,DESCRIPTOR>* boundaryCondition
-                = createLocalBoundaryCondition3D<T,DESCRIPTOR>();
+  SparseBlockStructure3D sb = createRegularDistribution3D(management.getBoundingBox(), nBlocks);
+  ExplicitThreadAttribution * eta = new ExplicitThreadAttribution(BlockToMpi);
+  MultiBlockManagement3D *domain_lattice_management = new MultiBlockManagement3D(sb,eta,management.getEnvelopeWidth(),management.getRefinementLevel());
+
+  hemocell.lattice = new MultiBlockLattice3D<T,DESCRIPTOR>(*domain_lattice_management,
+            defaultMultiBlockPolicy3D().getBlockCommunicator(),
+            defaultMultiBlockPolicy3D().getCombinedStatistics(),
+            defaultMultiBlockPolicy3D().getMultiCellAccess<T, DESCRIPTOR>(),
+            new GuoExternalForceBGKdynamics<T, DESCRIPTOR>(1.0/param::tau));
+
+
+OnLatticeBoundaryCondition3D<T,DESCRIPTOR>* boundaryCondition
+              = createLocalBoundaryCondition3D<T,DESCRIPTOR>();
 
   hemocell.lattice->toggleInternalStatistics(false);
 
@@ -262,7 +279,7 @@ int main(int argc, char *argv[]) {
   // hemo::global.statistics.outputStatistics(batchsize);
 
   hemo::global.statistics.printStatistics();
-  hemo::global.statistics.outputStatistics(128);
+  hemo::global.statistics.outputStatistics();
 
   WRITE_OUTPUT();
 
