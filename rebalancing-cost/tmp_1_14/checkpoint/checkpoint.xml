@@ -1,0 +1,42 @@
+<?xml version="1.0" ?>
+<Checkpoint>
+    <hemocell>
+        <benchmark>
+            <blockMultiply> 1 </blockMultiply>
+            <imbalance> 0 </imbalance>
+            <tslice> 200 </tslice>
+        </benchmark>
+        <domain>
+            <blockSize> -1 </blockSize>
+            <dt> -1 </dt>
+            <dx> 5.0e-7 </dx>
+            <fluidEnvelope> 2 </fluidEnvelope>
+            <kBT> 4.100531391e-21 </kBT>
+            <nuP> 1.1e-6 </nuP>
+            <nx> 50 </nx>
+            <ny> 50 </ny>
+            <nz> 50 </nz>
+            <particleEnvelope> 25 </particleEnvelope>
+            <refDir> 1 </refDir>
+            <rhoP> 1025 </rhoP>
+            <shearrate> 20 </shearrate>
+        </domain>
+        <ibm>
+            <stepMaterialEvery> 20 </stepMaterialEvery>
+            <stepParticleEvery> 5 </stepParticleEvery>
+        </ibm>
+        <parameters>
+            <logDirectory> log_1 </logDirectory>
+            <outputDirectory> tmp_1 </outputDirectory>
+            <warmup> 0 </warmup>
+        </parameters>
+        <sim>
+            <tmax> 5 </tmax>
+            <tmeas> 10000 </tmeas>
+        </sim>
+    </hemocell>
+    <General>
+        <Iteration> 2 </Iteration>
+        <OutDirectory> ./tmp_1_14/ </OutDirectory>
+    </General>
+</Checkpoint>

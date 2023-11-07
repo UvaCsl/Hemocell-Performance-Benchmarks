@@ -1,0 +1,21 @@
+SCOREP_FILE_NAMES_BEGIN # This is a comment
+  EXCLUDE */config/*
+SCOREP_FILE_NAMES_END
+
+SCOREP_REGION_NAMES_BEGIN
+EXCLUDE *
+INCLUDE *hemo::HemoCell::iterate*
+INCLUDE *plb::MultiBlockLattice3D*::collideAndStream*
+INCLUDE *plb::setExternalVector(*
+INCLUDE *syncEnvelopes*
+INCLUDE *hemo::HemoCellFields::advanceParticles*
+INCLUDE *hemo::HemoCellFields::applyConstitutiveModel*
+INCLUDE *hemo::HemoCellFields::deleteNonLocalParticles*
+INCLUDE *hemo::HemoCellFields::interpolateFluidVelocity*
+INCLUDE *hemo::HemoCellFields::deleteNonLocalParticles*
+INCLUDE *hemo::HemoCellFields::spreadParticleForce*
+INCLUDE *main(int, char*
+INCLUDE *slice*
+INCLUDE *doLoadBalance*
+INCLUDE *new_attribution_parmetis*
+SCOREP_REGION_NAMES_END
