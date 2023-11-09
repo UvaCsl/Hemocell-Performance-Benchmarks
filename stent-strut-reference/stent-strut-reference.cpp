@@ -35,6 +35,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "palabos3D.h"
 #include "palabos3D.hh"
 
+#ifdef SCOREP_USER_ENABLE
+#include <scorep/SCOREP_User.h>
+#else // SCOREP_USER_ENABLE
+
+/* **************************************************************************************
+ * Empty macros, if user instrumentation is disabled
+ * *************************************************************************************/
+#define SCOREP_USER_REGION_BEGIN( handle, name, type )
+#define SCOREP_USER_REGION_END( handle )
+#define SCOREP_USER_REGION_DEFINE( handle )
+#define SCOREP_USER_REGION_TYPE_DYNAMIC 1
+
+#endif // SCOREP_USER_ENABLE
+
 typedef double T;
 using namespace hemo;
 
@@ -54,6 +68,14 @@ int main(int argc, char* argv[]){
   try {
     writeOutput = (*cfg)["benchmark"]["writeOutput"].read<int>();
   } catch (...) {}
+
+  int bin_size = 0;
+  try { 
+    bin_size = (*cfg)["benchmark"]["binSize"].read<int>(); 
+    hlog << "bin size : " << bin_size << endl;
+  } catch (...) {
+    bin_size = (*cfg)["sim"]["tmax"].read<int>() + 1;
+  }
 
 // ----------------- Read in config file & geometry ---------------------------
 
@@ -155,10 +177,22 @@ int main(int argc, char* argv[]){
   unsigned int tcheckpoint = (*cfg)["sim"]["tcheckpoint"].read<unsigned int>();
   unsigned int tcsv = (*cfg)["sim"]["tcsv"].read<unsigned int>();
 
+  unsigned int trebalance = tmax + 1;
+  try {
+    trebalance = (*cfg)["benchmark"]["writeOutput"].read<int>();
+  } catch (...) {}
+
+  SCOREP_USER_REGION_DEFINE(my_region)
+  SCOREP_USER_REGION_BEGIN(my_region, "iteration-bin", SCOREP_USER_REGION_TYPE_DYNAMIC)
 
   while (hemocell.iter < tmax ) {
     
     hemocell.iterate();
+
+    if(hemocell.iter % bin_size == 0 && hemocell.iter != 0) {
+      SCOREP_USER_REGION_END(my_region)
+      SCOREP_USER_REGION_BEGIN(my_region, "iteration-bin", SCOREP_USER_REGION_TYPE_DYNAMIC)
+    }
 
     if (hemocell.iter % tmeas == 0) {
         hlog << "(main) Stats. @ " <<  hemocell.iter << " (" << hemocell.iter * param::dt << " s):" << endl;
@@ -174,6 +208,11 @@ int main(int argc, char* argv[]){
 
     }
 
+    if (hemocell.iter > 0 && hemocell.iter % trebalance == 0) {
+      hlog << "dolaodbalance" << endl;
+      hemocell.loadBalancer->doLoadBalance();
+    }
+
     if (hemocell.iter % tcsv == 0) {
       hlog << "Saving simple mean cell values to CSV at timestep " << hemocell.iter << endl;
       writeCellInfo_CSV(hemocell);
@@ -183,6 +222,8 @@ int main(int argc, char* argv[]){
       hemocell.saveCheckPoint();
     }
   }
+
+  SCOREP_USER_REGION_END(my_region)
 
   pcout << "(stent_strut) Simulation finished :)" << std::endl;
   return 0;
