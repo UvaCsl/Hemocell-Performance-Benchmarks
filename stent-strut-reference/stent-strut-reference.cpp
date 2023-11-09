@@ -38,14 +38,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 typedef double T;
 using namespace hemo;
 
+#define WRITE_OUTPUT() if(writeOutput) { hemocell.writeOutput(); }
+
 int main(int argc, char* argv[]){
     if(argc < 2){
         cout << "Usage: " << argv[0] << " <configuration.xml>" << endl;
         return -1;
-	}
-
+    }
+  
 	HemoCell hemocell(argv[1], argc, argv);
 	Config * cfg = hemocell.cfg;
+
+  /* Read benchmark related config */
+  bool writeOutput = 1;
+  try {
+    writeOutput = (*cfg)["benchmark"]["writeOutput"].read<int>();
+  } catch (...) {}
 
 // ----------------- Read in config file & geometry ---------------------------
 
@@ -127,7 +135,8 @@ int main(int argc, char* argv[]){
 	//loading the cellfield
   if (not cfg->checkpointed) {
     hemocell.loadParticles();
-    hemocell.writeOutput();
+    WRITE_OUTPUT()
+
   } else {
     pcout << "(stent_strut) CHECKPOINT found!" << endl;
     hemocell.loadCheckPoint();
@@ -161,7 +170,7 @@ int main(int argc, char* argv[]){
         ParticleStatistics pinfo = ParticleInfo::calculateForceStatistics(&hemocell); T topN = param::df * 1.0e12;
         hlog << "\t Force  -  min.: " << pinfo.min * topN << " pN, max.: " << pinfo.max * topN << " pN (" << pinfo.max << " lf), mean: " << pinfo.avg * topN << " pN" << endl;
 
-      hemocell.writeOutput();
+      WRITE_OUTPUT()
 
     }
 
