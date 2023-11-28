@@ -77,6 +77,12 @@ int main(int argc, char* argv[]){
     bin_size = (*cfg)["sim"]["tmax"].read<int>() + 1;
   }
 
+  unsigned int trebalance = 0;
+  try {
+    trebalance = (*cfg)["benchmark"]["trebalance"].read<int>();
+  } catch (...) {
+    trebalance = (*cfg)["sim"]["tmax"].read<int>() + 1;
+  }
 // ----------------- Read in config file & geometry ---------------------------
 
     hlogfile << "(stent_strut) (Geometry) reading and voxelizing STL file " << (*cfg)["domain"]["geometry"].read<string>() << endl;
@@ -177,10 +183,6 @@ int main(int argc, char* argv[]){
   unsigned int tcheckpoint = (*cfg)["sim"]["tcheckpoint"].read<unsigned int>();
   unsigned int tcsv = (*cfg)["sim"]["tcsv"].read<unsigned int>();
 
-  unsigned int trebalance = tmax + 1;
-  try {
-    trebalance = (*cfg)["benchmark"]["writeOutput"].read<int>();
-  } catch (...) {}
 
   SCOREP_USER_REGION_DEFINE(my_region)
   SCOREP_USER_REGION_BEGIN(my_region, "iteration-bin", SCOREP_USER_REGION_TYPE_DYNAMIC)
@@ -189,7 +191,7 @@ int main(int argc, char* argv[]){
     
     hemocell.iterate();
 
-    if(hemocell.iter % bin_size == 0 && hemocell.iter != 0) {
+    if(hemocell.iter % bin_size == 0 && hemocell.iter != 0 && hemocell.iter != tmax - 1) {
       SCOREP_USER_REGION_END(my_region)
       SCOREP_USER_REGION_BEGIN(my_region, "iteration-bin", SCOREP_USER_REGION_TYPE_DYNAMIC)
     }
