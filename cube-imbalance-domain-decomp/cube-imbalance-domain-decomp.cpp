@@ -198,6 +198,11 @@ int main(int argc, char *argv[]) {
   unsigned int tmax = (*cfg)["sim"]["tmax"].read<unsigned int>();
   unsigned int tmeas = (*cfg)["sim"]["tmeas"].read<unsigned int>();
 
+  unsigned int trebalance = tmax + 1;
+  try {
+    trebalance = (*cfg)["benchmark"]["writeOutput"].read<int>();
+  } catch (...) {}
+
   hlog << "(unbounded) Starting simulation..." << endl;
   int ncells =
       CellInformationFunctionals::getNumberOfCellsFromType(&hemocell, "RBC");
@@ -214,6 +219,11 @@ int main(int argc, char *argv[]) {
     if(hemocell.iter % bin_size == 0 && hemocell.iter != 0) {
       SCOREP_USER_REGION_END(my_region)
       SCOREP_USER_REGION_BEGIN(my_region, "iteration-bin", SCOREP_USER_REGION_TYPE_DYNAMIC)
+    }
+
+    if (hemocell.iter > 0 && hemocell.iter % trebalance == 0) {
+      hlog << "dolaodbalance" << endl;
+      hemocell.loadBalancer->doLoadBalance();
     }
 
     if (hemocell.iter % tmeas == 0) {
