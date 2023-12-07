@@ -18,10 +18,14 @@ def run_shell_cmd(command, retstatus=False, cwd='./'):
         return tmp.stdout.decode('utf-8')
 
 def parse_exp(args, exp_dir):
-    print("------ ENTERING {} ------".format(exp_dir))
+    print("\n------ ENTERING {} ------".format(exp_dir))
     scoredir=run_shell_cmd("ls -d {}/*SCOREP*/".format(exp_dir)).strip()
     cubexfile=scoredir + args.cubexname + ".cubex"
     csvfile=exp_dir + args.outputname + ".csv"
+
+    if len(scoredir) < 4:
+        print("NO SCOREP folder found, skipping ....")
+        return
 
     to_generate_or_not_to_generate = {"csv":True, "cubex":True} # Store if we need to generate these
     if os.path.isfile(csvfile):
@@ -48,7 +52,10 @@ def parse_exp(args, exp_dir):
     parse_cubex_to_csv(args, scoredir, cubexfile, csvfile, to_generate_or_not_to_generate)
 
     if to_generate_or_not_to_generate["csv"]:
-        update_csv(args, scoredir, cubexfile, csvfile)
+        try:
+            update_csv(args, scoredir, cubexfile, csvfile)
+        except:
+            print("updating csv failed")
 
 
 def parse_cubex_to_csv(args, scoredir, cubexfile, csvfile, gen):
@@ -108,6 +115,7 @@ def update_csv(args, scoredir, cubexfile, csvfile):
     df["iteration"]  = df.apply(lambda row: iteration[int(row["Cnode ID"])], axis=1)
 
     df.to_csv(csvfile, index=False)
+
 
 def loop_through_exps(args):
     dirs = run_shell_cmd("ls -d {}/*/".format(args.expdir)).strip().split('\n')
