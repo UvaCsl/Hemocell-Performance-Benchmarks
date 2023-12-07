@@ -55,6 +55,52 @@ using namespace hemo;
 
 map<plint, plint> BlockToMpi;
 
+void writeBlockDistribution(MultiBlockManagement3D mbm, Config *cfg, int id)
+{
+/*
+   * Output the blocks assinged to each process
+   *
+   * Not very efficiant, but should not have to be run often so probably not a big problem (yet).
+   */
+
+  std::vector<plint> blocks =  mbm.getLocalInfo().getBlocks();
+  std::fstream sout;
+  string filename;
+  try {
+   filename = plb::global::directories().getLogOutDir() + (*cfg)["benchmark"]["blockfile"].read<string>() + "." + to_string(id);
+  } catch (...) {
+   filename = plb::global::directories().getLogOutDir() + "blockAttribution." + to_string(id);
+  }
+
+  bool opened = false;
+  int turn = 0;
+
+  while (turn < plb::global::mpi().getSize()) {
+    if (turn == plb::global::mpi().getRank()) {
+      sout.open(filename,std::fstream::app);
+      if (!sout.is_open()) {
+        std::cout << "(Profiler) (Error) Opening" << filename << std::endl;
+      } else {
+        opened = true;
+        sout << plb::global::mpi().getRank() << " : ";
+
+        for (auto & element : blocks)
+        {
+          sout << element << " ";
+        }
+
+        sout << endl;
+
+      }
+      if (opened) {
+        sout.close();
+      }
+    }
+    plb::global::mpi().barrier();
+    turn++;
+  }
+}
+
 int main(int argc, char *argv[]) {
   if (argc < 2) {
     cout << "Usage: " << argv[0] << " <configuration.xml>" << endl;
@@ -200,7 +246,7 @@ int main(int argc, char *argv[]) {
 
   unsigned int trebalance = tmax + 1;
   try {
-    trebalance = (*cfg)["benchmark"]["writeOutput"].read<int>();
+    trebalance = (*cfg)["benchmark"]["trebalance"].read<int>();
   } catch (...) {}
 
   hlog << "(unbounded) Starting simulation..." << endl;
@@ -209,6 +255,9 @@ int main(int argc, char *argv[]) {
   hlog << " | RBC Volume ratio [x100%]: "
        << ncells * 77.0 * 100 / (nx * ny * nz) << endl;
   hlog << "(main)   nCells (global) = " << ncells << endl;
+
+  int writeId = 0;
+  writeBlockDistribution(hemocell.lattice->getMultiBlockManagement(), cfg, writeId++);
 
   SCOREP_USER_REGION_DEFINE(my_region)
   SCOREP_USER_REGION_BEGIN(my_region, "iteration-bin", SCOREP_USER_REGION_TYPE_DYNAMIC)
@@ -224,6 +273,7 @@ int main(int argc, char *argv[]) {
     if (hemocell.iter > 0 && hemocell.iter % trebalance == 0) {
       hlog << "dolaodbalance" << endl;
       hemocell.loadBalancer->doLoadBalance();
+      writeBlockDistribution(hemocell.lattice->getMultiBlockManagement(), cfg, writeId++);
     }
 
     if (hemocell.iter % tmeas == 0) {
