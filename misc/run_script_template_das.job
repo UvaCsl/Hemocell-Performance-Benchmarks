@@ -1,0 +1,52 @@
+#!/bin/bash
+
+#SBATCH -t 00:15:00
+#SBATCH --output=results/%J.out
+#SBATCH --error=results/%J.err
+
+
+tmpdir=/var/scratch/jvandijk/$SLURM_JOB_ID
+mkdir -p $tmpdir
+echo $tmpdir
+
+hemocell=/home/jvandijk/HemoCell-dev
+results=$(pwd)/results/${SLURM_JOB_ID}
+module restore hemocell
+
+mkdir -p $results
+
+export SCOREP_ENABLE_TRACING=false
+export SCOREP_ENABLE_PROFILING=true
+export SCOREP_FILTERING_FILE=/home/jvandijk/filter.filter
+export SCOREP_EXPERIMENT_DIRECTORY=$results/SCOREP
+
+config=$1
+benchmark=$2
+setupdir=$3
+
+echo "config $1"
+echo "benchmark $2"
+echo "setupdir $3"
+
+configFile=$(basename ${config})
+
+files=(${config} ${setupdir}/RBC.xml ${setupdir}/stent.stl ${setupdir}/RBC.pos ${setupdir}/PLT.pos ${setupdir}/PLT.xml ${setupdir}/filter.filter ${hemocell}/Hemocell-Performance-Benchmarks/${benchmark}/${benchmark})
+
+for file in "${files[@]}"; do
+	echo $file
+	cp $file $tmpdir/
+done
+
+cd $tmpdir
+
+echo "Starting Hemocell: $(date +'%R')"
+
+mpirun ./${benchmark} ${configFile}
+
+echo "Hemocell Finished: $(date +'%R')"
+
+python3 $hemocell/Hemocell-Performance-Benchmarks/scripts/generate-meta-data-yaml.py -m internal -b $4 -i $SLURM_JOB_ID -p archer-rome ${hemocell} ${hemocell}/Hemocell-Performance-Benchmarks/${benchmark} 
+mv $results/../*$SLURM_JOB_ID.err ${results}/output_$SLURM_JOB_ID.err
+mv $results/../*$SLURM_JOB_ID.out ${results}/output_$SLURM_JOB_ID.out
+rm $tmpdir/${benchmark}
+mv $tmpdir/* $results/
