@@ -1,6 +1,7 @@
 add_subdirectory("cube-imbalance-domain-decomp")
 add_subdirectory("cube-benchmark")
 add_subdirectory("cube-imbalance-hemo")
+add_subdirectory("cube-fractional-imbalance")
 add_subdirectory("rebalancing-cost")
 add_subdirectory("stent-strut-reference")
 add_subdirectory("stent-strut-wall-stent")

@@ -32,7 +32,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "palabos3D.h"
 #include "palabos3D.hh"
 
-
 #ifdef SCOREP_USER_ENABLE
 #include <scorep/SCOREP_User.h>
 #else // SCOREP_USER_ENABLE
@@ -40,21 +39,60 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /* **************************************************************************************
  * Empty macros, if user instrumentation is disabled
  * *************************************************************************************/
-#define SCOREP_USER_REGION_BEGIN( handle, name, type )
-#define SCOREP_USER_REGION_END( handle )
-#define SCOREP_USER_REGION_DEFINE( handle )
+#define SCOREP_USER_REGION_BEGIN(handle, name, type)
+#define SCOREP_USER_REGION_END(handle)
+#define SCOREP_USER_REGION_DEFINE(handle)
 #define SCOREP_USER_REGION_TYPE_DYNAMIC 1
 
 #endif // SCOREP_USER_ENABLE
 
-#define WRITE_OUTPUT() if(writeOutput) { hemocell.writeOutput(); }
-
+#define WRITE_OUTPUT()      \
+  if (writeOutput)          \
+  {                         \
+    hemocell.writeOutput(); \
+  }
 
 typedef double T;
 
 using namespace hemo;
 
-int main(int argc, char *argv[]) {
+map<plint, plint> BlockToMpi;
+
+void initializeLattice(HemoCell hemocell, Config *cfg)
+{
+}
+
+void createBlocks(SparseBlockStructure3D *sb,
+                  plint ox, plint oy, plint oz, 
+                  plint nx, plint ny, plint nz, 
+                  plint numBlocksX, plint numBlocksY, plint numBlocksZ){
+
+  plint posX = ox;
+  plint lx = nx / numBlocksX;
+  plint ly = ny / numBlocksY;
+  plint lz = nz / numBlocksZ;
+  for (plint iBlockX=0; iBlockX<numBlocksX; ++iBlockX) {
+    if (iBlockX < nx % numBlocksX) ++lx;
+    plint posY = oy;
+    for (plint iBlockY=0; iBlockY<numBlocksY; ++iBlockY) {
+      if (iBlockY < ny % numBlocksY) ++ly;
+      plint posZ = oz;
+      for (plint iBlockZ=0; iBlockZ<numBlocksZ; ++iBlockZ) {
+        if (iBlockZ < nz % numBlocksZ) ++lz;
+        sb->addBlock (
+                Box3D(posX, posX+lx-1, posY, posY+ly-1, posZ, posZ+lz-1),
+                sb->nextIncrementalId() );
+        posZ += lz;
+      }
+      posY += ly;
+    }
+    posX += lx;
+  }
+
+}
+
+int main(int argc, char *argv[])
+{
   if (argc < 2) {
     cout << "Usage: " << argv[0] << " <configuration.xml>" << endl;
     return -1;
@@ -64,18 +102,19 @@ int main(int argc, char *argv[]) {
   Config *cfg = hemocell.cfg;
 
   int bin_size = 0;
-  try { 
-    bin_size = (*cfg)["benchmark"]["binSize"].read<int>(); 
+  try {
+    bin_size = (*cfg)["benchmark"]["binSize"].read<int>();
     hlog << "bin size : " << bin_size << endl;
-  } catch (...) {
+  }
+  catch (...) {
     bin_size = (*cfg)["sim"]["tmax"].read<int>() + 1;
   }
 
   bool writeOutput = 1;
   try {
     writeOutput = (*cfg)["benchmark"]["writeOutput"].read<int>();
-  } catch (...) {}
-
+  }
+  catch (...) {}
 
   // number of cells along each axis
   int nx, ny, nz;
@@ -88,36 +127,111 @@ int main(int argc, char *argv[]) {
   param::printParameters();
 
   hlog << "(unbounded) (Fluid) Initializing Palabos Fluid Field" << endl;
-  hemocell.initializeLattice(defaultMultiBlockPolicy3D().getMultiBlockManagement(nx, ny, nz, (*cfg)["domain"]["fluidEnvelope"].read<int>()));
 
-  OnLatticeBoundaryCondition3D<T,DESCRIPTOR>* boundaryCondition
-                = createLocalBoundaryCondition3D<T,DESCRIPTOR>();
+  /* ------------------------------ FLI Fluid ------------------------------------*/
+
+  plint nProcs = global::mpi().getSize();
+  plint nBlocks = nProcs;
+
+  for (int i = nBlocks; i < nBlocks; i++) {
+    BlockToMpi[i] = i;
+  }
+  ExplicitThreadAttribution *eta = new ExplicitThreadAttribution(BlockToMpi);
+
+  MultiBlockManagement3D management = defaultMultiBlockPolicy3D().getMultiBlockManagement(nx, ny, nz, (*cfg)["domain"]["fluidEnvelope"].read<int>());
+
+  Box3D const &domain = management.getBoundingBox();
+  std::vector<plint> repartition = algorithm::evenRepartition(nBlocks, 3);
+  std::vector<plint> newRepartition(3);
+  if (domain.getNx() > domain.getNy())
+  { // nx>ny
+    if (domain.getNx() > domain.getNz()) { // nx>nz
+      newRepartition[0] = repartition[0];
+      if (domain.getNy() > domain.getNz()) { // ny>nz
+        newRepartition[1] = repartition[1];
+        newRepartition[2] = repartition[2];
+      }
+      else { // nz>ny
+        newRepartition[1] = repartition[2];
+        newRepartition[2] = repartition[1];
+      }
+    }
+    else { // nz>nx
+      newRepartition[2] = repartition[0];
+      newRepartition[1] = repartition[2];
+      newRepartition[0] = repartition[1];
+    }
+  }
+  else { // ny>nx
+    if (domain.getNy() > domain.getNz()) { // ny>nz
+      newRepartition[1] = repartition[0];
+      if (domain.getNx() > domain.getNz()) { // nx>nz
+        newRepartition[0] = repartition[1];
+        newRepartition[2] = repartition[2];
+      }
+      else { // nz>nx
+        newRepartition[0] = repartition[2];
+        newRepartition[2] = repartition[1];
+      }
+    }
+    else { // nz>ny
+      newRepartition[2] = repartition[0];
+      newRepartition[1] = repartition[1];
+      newRepartition[0] = repartition[2];
+    }
+  }
+
+  SparseBlockStructure3D sb(domain);
+
+  float FLIfluid = 0.0;
+  try { FLIfluid = (*cfg)["benchmark"]["FLIfluid"].read<float>(); }
+  catch (...) {};
+ 
+  /* If a FLIfluid is set, we increase the size of the of blocks with x=0 to match requested fli.  */
+  if (FLIfluid != 0.0){
+    plint nSizeX = (nx / newRepartition[0]) * (FLIfluid + 1);
+    createBlocks(&sb, 0, 0, 0, nSizeX, ny, nz, 1, newRepartition[1], newRepartition[2]);
+    createBlocks(&sb, nSizeX, 0, 0, nx - nSizeX, ny, nz, newRepartition[0] - 1, newRepartition[1], newRepartition[2]);
+  } else {
+    createBlocks(&sb, 0, 0, 0, nx, ny, nz, newRepartition[0], newRepartition[1], newRepartition[2]);
+  }
+
+  MultiBlockManagement3D *domain_lattice_management = new MultiBlockManagement3D(sb, eta, management.getEnvelopeWidth(), management.getRefinementLevel());
+
+  hemocell.lattice = new MultiBlockLattice3D<T, DESCRIPTOR>(*domain_lattice_management,
+                                                            defaultMultiBlockPolicy3D().getBlockCommunicator(),
+                                                            defaultMultiBlockPolicy3D().getCombinedStatistics(),
+                                                            defaultMultiBlockPolicy3D().getMultiCellAccess<T, DESCRIPTOR>(),
+                                                            new GuoExternalForceBGKdynamics<T, DESCRIPTOR>(1.0 / param::tau));
+
+  /* ------------------------------ END FLI Fluid ------------------------------------*/
+
+  OnLatticeBoundaryCondition3D<T, DESCRIPTOR> *boundaryCondition = createLocalBoundaryCondition3D<T, DESCRIPTOR>();
 
   hemocell.lattice->toggleInternalStatistics(false);
 
   // extract sides of the rectangular domain for assignment of boundary
   // conditions along the outer planes of the domain
-  Box3D top =    Box3D(0,    nx-1, 0,    ny-1, nz-1, nz-1);
-  Box3D bottom = Box3D(0,    nx-1, 0,    ny-1, 0,    0   );
-  Box3D front =  Box3D(0,    nx-1, 0,    0,    0,    nz-1);
-  Box3D back  =  Box3D(0,    nx-1, ny-1, ny-1, 0,    nz-1);
+  Box3D top = Box3D(0, nx - 1, 0, ny - 1, nz - 1, nz - 1);
+  Box3D bottom = Box3D(0, nx - 1, 0, ny - 1, 0, 0);
+  Box3D front = Box3D(0, nx - 1, 0, 0, 0, nz - 1);
+  Box3D back = Box3D(0, nx - 1, ny - 1, ny - 1, 0, nz - 1);
 
-  Box3D left  =  Box3D(0,    0,    0,    ny-1, 0,    nz-1);
-  Box3D right =  Box3D(nx-1, nx-1, 0,    ny-1, 0,    nz-1);
-
+  Box3D left = Box3D(0, 0, 0, ny - 1, 0, nz - 1);
+  Box3D right = Box3D(nx - 1, nx - 1, 0, ny - 1, 0, nz - 1);
 
   // all directions have periodicity
   hemocell.lattice->periodicity().toggleAll(false);
 
   // bounce back conditions along the front and back of the domain
-  defineDynamics(*hemocell.lattice, front,  new BounceBack<T, DESCRIPTOR> );
-  defineDynamics(*hemocell.lattice, back,   new BounceBack<T, DESCRIPTOR> );
+  defineDynamics(*hemocell.lattice, front, new BounceBack<T, DESCRIPTOR>);
+  defineDynamics(*hemocell.lattice, back, new BounceBack<T, DESCRIPTOR>);
 
-  defineDynamics(*hemocell.lattice, left,   new BounceBack<T, DESCRIPTOR> );
-  defineDynamics(*hemocell.lattice, right,  new BounceBack<T, DESCRIPTOR> );
+  defineDynamics(*hemocell.lattice, left, new BounceBack<T, DESCRIPTOR>);
+  defineDynamics(*hemocell.lattice, right, new BounceBack<T, DESCRIPTOR>);
 
-  defineDynamics(*hemocell.lattice, top,   new BounceBack<T, DESCRIPTOR> );
-  defineDynamics(*hemocell.lattice, bottom,  new BounceBack<T, DESCRIPTOR> );
+  defineDynamics(*hemocell.lattice, top, new BounceBack<T, DESCRIPTOR>);
+  defineDynamics(*hemocell.lattice, bottom, new BounceBack<T, DESCRIPTOR>);
 
   // define shear velocity along top/bottom planes (z axis)
   // shear velocity given by `height * shear rate / 2`
@@ -153,20 +267,24 @@ int main(int argc, char *argv[]) {
   hemocell.setFluidOutputs(outputs);
 
   // loading the cellfield
-  if (not cfg->checkpointed) {
+  if (not cfg->checkpointed)
+  {
     hemocell.loadParticles();
     WRITE_OUTPUT();
-  } else {
+  }
+  else
+  {
     hemocell.loadCheckPoint();
   }
 
-
-  if (hemocell.iter == 0) {
+  if (hemocell.iter == 0)
+  {
     hlog << "(unbounded) fresh start: warming up cell-free fluid domain for "
          << (*cfg)["parameters"]["warmup"].read<plint>() << " iterations..."
          << endl;
     for (plint itrt = 0; itrt < (*cfg)["parameters"]["warmup"].read<plint>();
-         ++itrt) {
+         ++itrt)
+    {
       hemocell.lattice->collideAndStream();
     }
   }
@@ -184,15 +302,18 @@ int main(int argc, char *argv[]) {
   SCOREP_USER_REGION_DEFINE(my_region)
   SCOREP_USER_REGION_BEGIN(my_region, "iteration-bin", SCOREP_USER_REGION_TYPE_DYNAMIC)
 
-  while (hemocell.iter < tmax) {
+  while (hemocell.iter < tmax)
+  {
     hemocell.iterate();
 
-    if(hemocell.iter % bin_size == 0 && hemocell.iter != 0) {
+    if (hemocell.iter % bin_size == 0 && hemocell.iter != 0)
+    {
       SCOREP_USER_REGION_END(my_region)
       SCOREP_USER_REGION_BEGIN(my_region, "iteration-bin", SCOREP_USER_REGION_TYPE_DYNAMIC)
     }
 
-    if (hemocell.iter % tmeas == 0) {
+    if (hemocell.iter % tmeas == 0)
+    {
       hlog << "(main) Stats. @ " << hemocell.iter << " ("
            << hemocell.iter * param::dt << " s):" << endl;
       hlog << "\t # of cells: "
@@ -212,71 +333,60 @@ int main(int argc, char *argv[]) {
 
   SCOREP_USER_REGION_END(my_region)
 
-  // int batchsize = 128;
-  // try { batchsize = (*cfg)["profiler"]["batchsize"].read<int>(); }
-  // catch (...) { batchsize = 128; }
-  // hemo::global.statistics.printStatistics();
-  // hemo::global.statistics.outputStatistics(batchsize);
-
-  hemo::global.statistics.printStatistics();
-  hemo::global.statistics.outputStatistics(128);
-
-  WRITE_OUTPUT()
-
   /*
    * Outputs the neighbouring blocks for all processes
    *
    * It uses the overlap function, based on the fact that the domain is extended to include the edge lattitice points.
    * Not very efficiant, but should not have to be run often so probably not a big problem (yet).
    */
-  //std::vector<PeriodicOverlap3D> overlapsP = hemocell.lattice->getMultiBlockManagement().getLocalInfo().getPeriodicOverlaps();
-  // std::vector<Overlap3D> overlaps = hemocell.lattice->getMultiBlockManagement().getLocalInfo().getNormalOverlaps();
-  // std::fstream sout;
-  // string filename;
-  // try {
-  //  filename = plb::global::directories().getLogOutDir() + (*cfg)["profiler"]["neighbourFile"].read<string>();
-  // } catch (...) {
-  //  filename = plb::global::directories().getLogOutDir() + "neighbours.neighbours";
-  // }
+  std::vector<PeriodicOverlap3D> overlapsP = hemocell.lattice->getMultiBlockManagement().getLocalInfo().getPeriodicOverlaps();
+  std::vector<Overlap3D> overlaps = hemocell.lattice->getMultiBlockManagement().getLocalInfo().getNormalOverlaps();
 
-  // bool opened = false;
-  // int turn = 0;
+  std::stringstream strings;
 
-  // while (turn < plb::global::mpi().getSize()) {
-  //   if (turn == plb::global::mpi().getRank()) {
-  //     sout.open(filename,std::fstream::app);
-  //     if (!sout.is_open()) {
-  //       std::cout << "(Profiler) (Error) Opening" << filename << std::endl;
-  //     } else {
-  //       opened = true;
-  //       sout << plb::global::mpi().getRank() << " (";
-  //       for(int tmpi = 0; tmpi < (int) hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks().size(); tmpi++) sout << hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks()[tmpi];
-  //       sout << ") ";
+  strings << "(";
+  for (int tmpi = 0; tmpi < (int)hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks().size(); tmpi++)
+    strings << hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks()[tmpi];
+  strings << ") ";
 
-  //       for(int tmpi = 0 ; tmpi < (int)overlaps.size(); tmpi++){
-  //               bool self = false;
+  for (int tmpi = 0; tmpi < (int)overlaps.size(); tmpi++)
+  {
+    bool self = false;
 
-  //               for (int tmpj = 0; tmpj < (int) hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks().size(); tmpj++) {
-  //                       if (overlaps[tmpi].getOriginalId() == hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks()[tmpj]){
-  //                               self = true;
-  //                               break;
-  //                       }
-  //               }
+    for (int tmpj = 0; tmpj < (int)hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks().size(); tmpj++)
+    {
+      if (overlaps[tmpi].getOriginalId() == hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks()[tmpj])
+      {
+        self = true;
+        break;
+      }
+    }
 
-  //               if (self) sout << " " << overlaps[tmpi].getOverlapId();
-  //       }
+    if (self)
+      strings << " " << overlaps[tmpi].getOverlapId();
+  }
+  hemo::global.statistics.addMetric("neighbours", strings.str());
 
+  int RBCs, size;
+  RBCs = size = 0;
 
-  //       sout << endl;
+  for (const plint &blockId : hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks())
+  {
+    // Warning: Time measurements will be inaccurate
+    RBCs += (float)hemocell.cellfields->immersedParticles->getComponent(blockId).particles.size();
+    int Nx = hemocell.lattice->getComponent(blockId).getNx();
+    int Ny = hemocell.lattice->getComponent(blockId).getNy();
+    int Nz = hemocell.lattice->getComponent(blockId).getNz();
+    size += Nx * Ny * Nz;
+  }
 
-  //     }
-  //     if (opened) {
-  //       sout.close();
-  //     }
-  //   }
-  //   plb::global::mpi().barrier();
-  //   turn++;
-  // }
+  hemo::global.statistics.addMetric("RBCs", std::to_string(RBCs));
+  hemo::global.statistics.addMetric("Atomic Block Size", std::to_string(size));
+
+  hemo::global.statistics.printStatistics();
+  hemo::global.statistics.outputStatistics(128);
+
+  WRITE_OUTPUT()
 
   hlog << "(main) Simulation finished :) " << endl;
   return 0;
