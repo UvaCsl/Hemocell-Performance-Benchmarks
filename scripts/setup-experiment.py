@@ -32,7 +32,7 @@ class Experiment:
     # processes = None
     # size = None
     # ab_size = None
-    FILES=["RBC.xml", "RBC.pos", "PLT.xml", "PLT.pos", "config.xml"]
+    FILES=["RBC.xml", "RBC.pos", "PLT.xml", "PLT.pos", "config.xml", "filter.filter"]
 
     def __init__(self, name, input_dir, output_dir, np, size, ab_size, iterations):
         self.name = name
