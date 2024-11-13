@@ -72,14 +72,14 @@ class Experiment:
 
         replaced = False
         for i, line in enumerate(data):
-            if field in line:
+            if f"<{field}>" in line:
                 data[i] = new_line
                 replaced = True
                 break
 
         if not replaced:
             for i, line in enumerate(data):
-                if root in line:
+                if f"<{root}>" in line:
                     data.insert(i+1, new_line)
                     replaced = True
                     break
