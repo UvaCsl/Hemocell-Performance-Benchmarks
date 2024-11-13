@@ -34,13 +34,14 @@ class Experiment:
     # ab_size = None
     FILES=["RBC.xml", "RBC.pos", "PLT.xml", "PLT.pos", "config.xml"]
 
-    def __init__(self, name, input_dir, output_dir, np, size, ab_size):
+    def __init__(self, name, input_dir, output_dir, np, size, ab_size, iterations):
         self.name = name
         self.input_dir = input_dir
         self.output_dir = output_dir
         self.np = np 
         self.size = size
         self.ab_size = ab_size
+        self.iterations = iterations
         self.experiment_dir = f"{self.output_dir}/{self.name}"
         self.config_file = f"{self.output_dir}/{self.name}/config.xml"
 
@@ -56,7 +57,7 @@ class Experiment:
         if not ab_size is None:
             ab_size = tuple([int(x) for x in ab_size.split(',')])
 
-        return cls(parser.name, parser.input_dir, parser.output_dir, parser.np, size, ab_size)
+        return cls(parser.name, parser.input_dir, parser.output_dir, parser.np, size, ab_size, parser.iterations)
 
 
     def write_to_config(self, root, field, value):
@@ -111,8 +112,9 @@ class Experiment:
                 i = (i + 1) % 3
 
         if not size is None:
-            self.write_to_config("domain", "nxt", 999)
-            self.write_to_config("domainzs", "nxae", 999)
+            self.write_to_config("domain", "nx", size[0])
+            self.write_to_config("domain", "ny", size[1])
+            self.write_to_config("domain", "nz", size[2])
 
     def create(self):
         try:
@@ -127,24 +129,35 @@ class Experiment:
 
         run_shell_cmd(f"cp {' '.join([self.input_dir + '/' + f for f in self.FILES])} {self.experiment_dir}")
 
+        self.write_to_config("sim", "tmax", self.iterations)
+
         self.set_size()
 
 
 class FractionalImbalance(Experiment):
 
-    def __init__(self, name, input_dir, output_dir, np, size, ab_size, fli_fluid, fli_part):
-        super().__init__(name, input_dir, output_dir, np, size, ab_size)
+    def __init__(self, name, input_dir, output_dir, np, size, ab_size, iterations, fli_fluid, fli_part):
+        super().__init__(name, input_dir, output_dir, np, size, ab_size, iterations)
         self.fli_fluid = fli_fluid
         self.fli_part  = fli_part
 
     def create(self):
         super().create()
+        self.fli()
         # Change fli fluid parameters
         # Create RBC.plt based on fli
 
+    def fli(self):
+        """ Update the config and create RBC set fli"""
+
+        #FLI fluid
+        self.write_to_config("benchmark", "FLIfluid", self.fli_fluid)
+
+        #FLI particle (later)
+
     @classmethod
     def from_experiment(cls, exp, fli_fluid, fli_part):
-        return cls(exp.name, exp.input_dir, exp.output_dir, exp.np, exp.size, exp.ab_size, fli_fluid, fli_part)
+        return cls(exp.name, exp.input_dir, exp.output_dir, exp.np, exp.size, exp.ab_size, exp.iterations, fli_fluid, fli_part)
 
     @classmethod
     def from_args(cls, parser):
@@ -163,6 +176,8 @@ def main():
     parser.add_argument("-p", "--np", type=int, help="Number of processes", default=None)
     parser.add_argument("-s", "--size", type=str, help="Size of domain, format=x,y,z", default=None)
     parser.add_argument("-a", "--atomic_block_size", type=str, help="Size of atomic block, format=x,y,z", default=None)
+    parser.add_argument("-e", "--experiment", type=str, help="Name of the experiment", default="cube")
+    parser.add_argument("-t", "--iterations", type=int, help="Number of iterations", default=1)
     parser.add_argument("--fli_fluid", type=float, help="Fractional imbalance fluid", default=0)
     parser.add_argument("--fli_part", type=float, help="Fractional imbalance part", default=0)
 
