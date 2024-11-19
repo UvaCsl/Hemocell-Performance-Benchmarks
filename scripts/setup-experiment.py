@@ -160,7 +160,7 @@ class FractionalImbalance(Experiment):
         if self.fli_fluid is None:
             return
 
-        self.write_to_config("benchmark", "FLIpart", self.fli_fluid)
+        self.write_to_config("benchmark", "FLIpart", self.fli_part)
         primes = prime_factors(self.np) 
         pr = [1,1,1]
 
