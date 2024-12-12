@@ -68,16 +68,16 @@ void createBlocks(SparseBlockStructure3D *sb,
                   plint numBlocksX, plint numBlocksY, plint numBlocksZ){
 
   plint posX = ox;
-  plint lx = nx / numBlocksX;
-  plint ly = ny / numBlocksY;
-  plint lz = nz / numBlocksZ;
   for (plint iBlockX=0; iBlockX<numBlocksX; ++iBlockX) {
+    plint lx = nx / numBlocksX;
     if (iBlockX < nx % numBlocksX) ++lx;
     plint posY = oy;
     for (plint iBlockY=0; iBlockY<numBlocksY; ++iBlockY) {
+      plint ly = ny / numBlocksY;
       if (iBlockY < ny % numBlocksY) ++ly;
       plint posZ = oz;
       for (plint iBlockZ=0; iBlockZ<numBlocksZ; ++iBlockZ) {
+        plint lz = nz / numBlocksZ;
         if (iBlockZ < nz % numBlocksZ) ++lz;
         sb->addBlock (
                 Box3D(posX, posX+lx-1, posY, posY+ly-1, posZ, posZ+lz-1),
@@ -189,9 +189,19 @@ int main(int argc, char *argv[])
  
   /* If a FLIfluid is set, we increase the size of the of blocks with x=0 to match requested fli.  */
   if (FLIfluid != 0.0){
-    plint nSizeX = (nx / newRepartition[0]) * (FLIfluid + 1);
-    createBlocks(&sb, 0, 0, 0, nSizeX, ny, nz, 1, newRepartition[1], newRepartition[2]);
-    createBlocks(&sb, nSizeX, 0, 0, nx - nSizeX, ny, nz, newRepartition[0] - 1, newRepartition[1], newRepartition[2]);
+    if (newRepartition[0] >= newRepartition[1] & newRepartition[0] >= newRepartition[2]){
+      plint nSizeX = (nx / newRepartition[0]) * (FLIfluid + 1);
+      createBlocks(&sb, 0, 0, 0, nSizeX, ny, nz, 1, newRepartition[1], newRepartition[2]);
+      createBlocks(&sb, nSizeX-1, 0, 0, nx - nSizeX, ny, nz, newRepartition[0] - 1, newRepartition[1], newRepartition[2]);
+    } else if (newRepartition[1] >= newRepartition[0] & newRepartition[1] >= newRepartition[2]){
+      plint nSizeY = (ny / newRepartition[1]) * (FLIfluid + 1);
+      createBlocks(&sb, 0, 0, 0, nx, nSizeY, nz, newRepartition[0], 1, newRepartition[2]);
+      createBlocks(&sb, 0, nSizeY-1, 0, nx, ny - nSizeY, nz, newRepartition[0], newRepartition[1] - 1, newRepartition[2]);
+    } else {
+      plint nSizeZ = (nz / newRepartition[2]) * (FLIfluid + 1);
+      createBlocks(&sb, 0, 0, 0, nx, ny, nSizeZ, newRepartition[0], newRepartition[1], 1);
+      createBlocks(&sb, 0, 0, nSizeZ-1, nx, ny, nz - nSizeZ, newRepartition[0], newRepartition[1], newRepartition[2] - 1);
+    }
   } else {
     createBlocks(&sb, 0, 0, 0, nx, ny, nz, newRepartition[0], newRepartition[1], newRepartition[2]);
   }
