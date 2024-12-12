@@ -82,6 +82,7 @@ void createBlocks(SparseBlockStructure3D *sb,
         sb->addBlock (
                 Box3D(posX, posX+lx-1, posY, posY+ly-1, posZ, posZ+lz-1),
                 sb->nextIncrementalId() );
+                //hlog << "Block: " << posX << ", " << posX+lx-1 << " : " << posY << ", " << posY+ly-1 << " : " << posZ << ", " << posZ+lz-1 << endl;
         posZ += lz;
       }
       posY += ly;
@@ -191,16 +192,17 @@ int main(int argc, char *argv[])
   if (FLIfluid != 0.0){
     if (newRepartition[0] >= newRepartition[1] & newRepartition[0] >= newRepartition[2]){
       plint nSizeX = (nx / newRepartition[0]) * (FLIfluid + 1);
-      createBlocks(&sb, 0, 0, 0, nSizeX, ny, nz, 1, newRepartition[1], newRepartition[2]);
-      createBlocks(&sb, nSizeX-1, 0, 0, nx - nSizeX, ny, nz, newRepartition[0] - 1, newRepartition[1], newRepartition[2]);
+      createBlocks(&sb,        0, 0, 0, nSizeX,      ny, nz, 1,                     newRepartition[1], newRepartition[2]);
+      createBlocks(&sb, nSizeX, 0, 0, nx - nSizeX, ny, nz, newRepartition[0] - 1, newRepartition[1], newRepartition[2]);
+
     } else if (newRepartition[1] >= newRepartition[0] & newRepartition[1] >= newRepartition[2]){
       plint nSizeY = (ny / newRepartition[1]) * (FLIfluid + 1);
       createBlocks(&sb, 0, 0, 0, nx, nSizeY, nz, newRepartition[0], 1, newRepartition[2]);
-      createBlocks(&sb, 0, nSizeY-1, 0, nx, ny - nSizeY, nz, newRepartition[0], newRepartition[1] - 1, newRepartition[2]);
+      createBlocks(&sb, 0, nSizeY, 0, nx, ny - nSizeY, nz, newRepartition[0], newRepartition[1] - 1, newRepartition[2]);
     } else {
       plint nSizeZ = (nz / newRepartition[2]) * (FLIfluid + 1);
       createBlocks(&sb, 0, 0, 0, nx, ny, nSizeZ, newRepartition[0], newRepartition[1], 1);
-      createBlocks(&sb, 0, 0, nSizeZ-1, nx, ny, nz - nSizeZ, newRepartition[0], newRepartition[1], newRepartition[2] - 1);
+      createBlocks(&sb, 0, 0, nSizeZ, nx, ny, nz - nSizeZ, newRepartition[0], newRepartition[1], newRepartition[2] - 1);
     }
   } else {
     createBlocks(&sb, 0, 0, 0, nx, ny, nz, newRepartition[0], newRepartition[1], newRepartition[2]);
