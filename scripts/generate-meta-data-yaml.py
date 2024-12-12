@@ -63,10 +63,12 @@ def gen_general(args):
 
     d['Id'] = args.id
     d['Platform'] = args.platform
+    d['Benchmark'] = args.benchmark
+    d['Monitor-tool'] = args.tool
     d['Date'] = now.strftime("%Y-%m-%d %H:%M")
     d['Node_list'] = os.getenv("SLURM_JOB_NODELIST")
-    d['Tasks'] = os.getenv("SLURM_NTASKS")
-    d['Nodes'] = os.getenv("SLURM_NNODES")
+    d['Tasks'] = args.tasks if args.tasks else os.getenv("SLURM_NTASKS")
+    d['Nodes'] = args.nodes if args.nodes else os.getenv("SLURM_NNODES")
 
     return d
 
@@ -78,7 +80,7 @@ def gen_benchmark(dir_name):
 
     d = {}
     with open(dir_name + '/meta.yml') as f:
-        d = yaml.load(f, Loader=yaml.FullLoader)
+        d = yaml.load(f, Loader=yaml.CLoader)
 
     d['Git_commit'] = run_shell_cmd("git rev-parse HEAD", dir_name).strip()
     d['Git_origin'] = run_shell_cmd("git ls-remote --get-url origin", dir_name).strip()
@@ -92,8 +94,12 @@ def main():
     parser.add_argument("hemocell_dir", type=str, help="Hemocell directory")
     parser.add_argument("benchmark_dir", type=str, help="Benchmark directory")
     parser.add_argument("-p", "--platform", type=str, help="Which platform are we running on")
+    parser.add_argument("-m", "--tool", type=str, help="The performance monitor tool used")
+    parser.add_argument("-b", "--benchmark", type=str, help="Benchmark name")
+    parser.add_argument("-n", "--nodes", type=int, help="Number of nodes")
+    parser.add_argument("-t", "--tasks", type=int, help="Number of processes")
     parser.add_argument("-i", "--id", type=str, help="Experiment id")
-    parser.add_argument("-f", "--out_file", type=str, help="name of the output file", default="meta.yml")
+    parser.add_argument("-f", "--out_file", type=str, help="name of the output file", default="meta.yaml")
     args = parser.parse_args()
 
     meta_dict = {}
@@ -101,7 +107,7 @@ def main():
     meta_dict['Benchmark'] = gen_benchmark(args.benchmark_dir);
     meta_dict['Hemocell'] = gen_hemocell(args.hemocell_dir);
     meta_dict['Ear'] = gen_ear();
-    meta_dict_yaml = yaml.dump(meta_dict, sort_keys=False)
+    meta_dict_yaml = yaml.dump(meta_dict)
 
     with open(args.out_file, "w") as text_file:
         text_file.write(meta_dict_yaml)
