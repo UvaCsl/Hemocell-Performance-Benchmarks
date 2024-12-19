@@ -215,14 +215,21 @@ class FractionalImbalance(Experiment):
             for x in range(pr[0]):
                 for y in range(pr[1]):
                     for z in range(pr[2]):
+                        if i < peak[1]:
+                            n = peak[0]
+                        else:
+                            n = base
+                            if i - peak[1] < left:
+                                n = n + 1
 
-                        num_cells = self.fli_part_base
+                        num_cells = n
 
                         if num_cells > max_cells[0] * max_cells[1] * max_cells[2]:
                             print("WARNING: Atomic-block not large enough for number of cells")
 
-                        i = 0
+                        ic = 0
                         offset = [0.5 * x * ab_size[0] + 10, 0.5 * y * ab_size[1] + 5, 0.5 * z * ab_size[2] + 10]
+
 
                         # Loop through each cell in a AB
                         for ix in range(max_cells[0]):
@@ -230,15 +237,15 @@ class FractionalImbalance(Experiment):
                                 for iz in range(max_cells[2]):
                                     l_offset = [ix * RBC_size[0], iy * RBC_size[1], iz * RBC_size[2]]
                                     RBCs.append(f"{offset[0] + l_offset[0]:.1f} {offset[1] + l_offset[1]:.1f} {offset[2] + l_offset[2]:.1f} 0 0 0\n")
-                                    i += 1
+                                    ic += 1
 
-                                    if i == num_cells:
+                                    if ic == num_cells:
                                         break
 
-                                if i == num_cells:
+                                if ic == num_cells:
                                     break
 
-                            if i == num_cells:
+                            if ic == num_cells:
                                 break
             
 
