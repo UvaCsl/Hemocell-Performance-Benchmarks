@@ -4,6 +4,7 @@ import shutil
 import os
 import subprocess
 import yaml
+import numpy as np
 from datetime import datetime
 
 def run_shell_cmd(command, cwd='./'):
@@ -44,6 +45,7 @@ class Experiment:
         self.iterations = iterations
         self.experiment_dir = f"{self.output_dir}/{self.name}"
         self.config_file = f"{self.output_dir}/{self.name}/config.xml"
+        self.RBC_size = [8, 4, 8]
 
 
     @classmethod
@@ -94,6 +96,17 @@ class Experiment:
             file.writelines(data)
 
 
+    def set_ab_size(self):
+        """ Set self.ab_size """
+        if not self.ab_size is None:
+            return
+
+        primes = prime_factors(self.size[0] * self.size[1] * self.size[2]) 
+        self.ab_size[0] = self.size[0] / primes[0]
+        self.ab_size[1] = self.size[1] / primes[1]
+        self.ab_size[2] = self.size[2] / primes[2]
+
+
     def set_size(self):
         """ Write new size to config. """
         size = None
@@ -117,6 +130,7 @@ class Experiment:
             self.write_to_config("domain", "ny", size[1])
             self.write_to_config("domain", "nz", size[2])
 
+
     def create(self):
         try:
             os.mkdir(f"{self.experiment_dir}")
@@ -133,15 +147,17 @@ class Experiment:
         self.write_to_config("sim", "tmax", self.iterations)
 
         self.set_size()
+        self.set_ab_size()
 
 
 class FractionalImbalance(Experiment):
 
-    def __init__(self, name, input_dir, output_dir, np, size, ab_size, iterations, fli_fluid, fli_part, fli_part_base):
+    def __init__(self, name, input_dir, output_dir, np, size, ab_size, iterations, fli_fluid, fli_part, fli_part_base, fli_part_stack):
         super().__init__(name, input_dir, output_dir, np, size, ab_size, iterations)
         self.fli_fluid = fli_fluid
         self.fli_part  = fli_part
         self.fli_part_base = fli_part_base
+        self.fli_part_stack = fli_part_stack
 
     def create(self):
         super().create()
@@ -149,18 +165,11 @@ class FractionalImbalance(Experiment):
         # Change fli fluid parameters
         # Create RBC.plt based on fli
 
-
-    def fli(self):
-        """ Update the config and create RBC set fli"""
-
-        #FLI fluid
-        self.write_to_config("benchmark", "FLIfluid", self.fli_fluid)
-
-        #skip rest if not fli_fluid set
-        if self.fli_fluid is None:
-            return
+    def fli_create_part(self):
+        """ Create the RBC.pos files """
 
         self.write_to_config("benchmark", "FLIpart", self.fli_part)
+
         primes = prime_factors(self.np) 
         pr = [1,1,1]
 
@@ -170,8 +179,8 @@ class FractionalImbalance(Experiment):
             pr[i] = pr[i] * x
             i = (i + 1) % 3
 
-        ab_size = [self.size[0] / pr[0], self.size[1] / pr[1], self.size[2] / pr[2]]
-
+        ab_size  = self.ab_size
+        RBC_size = self.RBC_size
 
         total = self.fli_part_base * self.np
         peak = (int(self.fli_part_base * (self.fli_part + 1)), int(self.np * .1))
@@ -179,20 +188,60 @@ class FractionalImbalance(Experiment):
         left = total - (base * (self.np - peak[1]) + (peak[0] * peak[1]))
 
         RBCs = []
-        i = 0
-        for x in range(pr[0]):
-            for y in range(pr[1]):
-                for z in range(pr[2]):
-                    if i < peak[1]:
-                        n = peak[0]
-                    else:
-                        n = base
-                        if i - peak[1] < left:
-                            n = n + 1
-                    for _ in range(n):
-                        RBCs.append(f"{0.5 * x * ab_size[0] + 5:.1f} {0.5 * y * ab_size[1] + 5:.1f} {0.5 * z * ab_size[2] + 5:.1f} 0 0 0\n")
 
-                    i = i + 1
+        # Create RBC array if RBCs are stacked
+        if self.fli_part_stack:
+            i = 0
+            for x in range(pr[0]):
+                for y in range(pr[1]):
+                    for z in range(pr[2]):
+                        if i < peak[1]:
+                            n = peak[0]
+                        else:
+                            n = base
+                            if i - peak[1] < left:
+                                n = n + 1
+                        for _ in range(n):
+                            RBCs.append(f"{0.5 * x * ab_size[0] + self5:.1f} {0.5 * y * ab_size[1] + 5:.1f} {0.5 * z * ab_size[2] + 5:.1f} 0 0 0\n")
+
+                        i = i + 1
+        else:
+            l_index = np.argsort(self.size)
+            max_cells = [int((self.ab_size[0] - 5.0) / self.RBC_size[0]), 
+                         int((self.ab_size[1] - 2.5) / self.RBC_size[1]), 
+                         int((self.ab_size[2] - 5.0) / self.RBC_size[2])] 
+
+            # Loop through each process
+            for x in range(pr[0]):
+                for y in range(pr[1]):
+                    for z in range(pr[2]):
+
+                        num_cells = self.fli_part_base
+
+                        if num_cells > max_cells[0] * max_cells[1] * max_cells[2]:
+                            print("WARNING: Atomic-block not large enough for number of cells")
+
+                        i = 0
+                        offset = [0.5 * x * ab_size[0] + 10, 0.5 * y * ab_size[1] + 5, 0.5 * z * ab_size[2] + 10]
+
+                        # Loop through each cell in a AB
+                        for ix in range(max_cells[0]):
+                            for iy in range(max_cells[1]):
+                                for iz in range(max_cells[2]):
+                                    l_offset = [ix * RBC_size[0], iy * RBC_size[1], iz * RBC_size[2]]
+                                    RBCs.append(f"{offset[0] + l_offset[0]:.1f} {offset[1] + l_offset[1]:.1f} {offset[2] + l_offset[2]:.1f} 0 0 0\n")
+                                    i += 1
+
+                                    if i == num_cells:
+                                        break
+
+                                if i == num_cells:
+                                    break
+
+                            if i == num_cells:
+                                break
+            
+
 
         RBCs.insert(0, f"{len(RBCs)}\n")
 
@@ -200,10 +249,26 @@ class FractionalImbalance(Experiment):
         f.write("".join(RBCs))
         f.close()
 
+    def fli(self):
+        """ Update the config and create RBC set fli"""
+
+        #FLI fluid
+        self.write_to_config("benchmark", "FLIfluid", self.fli_fluid)
+
+        #skip rest if not fli_part set
+        if self.fli_part is None:
+            return
+        
+        self.fli_create_part()
+
+
+
 
     @classmethod
-    def from_experiment(cls, exp, fli_fluid, fli_part, fli_part_base):
-        return cls(exp.name, exp.input_dir, exp.output_dir, exp.np, exp.size, exp.ab_size, exp.iterations, fli_fluid, fli_part, fli_part_base)
+    def from_experiment(cls, exp, fli_fluid, fli_part, fli_part_base, fli_part_stack):
+        return cls(exp.name, exp.input_dir, exp.output_dir, 
+                   exp.np, exp.size, exp.ab_size, exp.iterations, 
+                   fli_fluid, fli_part, fli_part_base, fli_part_stack)
 
     @classmethod
     def from_args(cls, parser):
@@ -211,7 +276,7 @@ class FractionalImbalance(Experiment):
 
         obj = Experiment.from_args(parser)
 
-        return cls.from_experiment(obj, parser.fli_fluid, parser.fli_part, parser.fli_part_base)
+        return cls.from_experiment(obj, parser.fli_fluid, parser.fli_part, parser.fli_part_base, parser.fli_part_stack)
 
 
 def main():
@@ -227,6 +292,7 @@ def main():
     parser.add_argument("--fli_fluid", type=float, help="Fractional imbalance fluid", default=None)
     parser.add_argument("--fli_part", type=float, help="Fractional imbalance part", default=0)
     parser.add_argument("--fli_part_base", type=int, help="Fractional imbalance part", default=0)
+    parser.add_argument("--fli_part_stack", type=bool, help="If true RBCs are stacked", default=False)
 
     #Still need to setup
     parser.add_argument("-v", "--log", type=str, help="Loggin level=[DEBUG,INFO,WARNING,ERROR,CRITICAL]", default="WARNING")
