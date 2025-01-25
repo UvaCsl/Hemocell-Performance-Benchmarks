@@ -10,6 +10,8 @@ from datetime import datetime
 def run_shell_cmd(command, cwd='./'):
     return subprocess.run(command.split(' '), stdout=subprocess.PIPE, cwd=cwd).stdout.decode('utf-8')
 
+RBC_VOLUME = 90
+
 
 # https://stackoverflow.com/questions/15347174/python-finding-prime-factors
 def prime_factors(n):
@@ -161,12 +163,15 @@ class Experiment:
 
 class FractionalImbalance(Experiment):
 
-    def __init__(self, name, input_dir, output_dir, np, size, ab_size, iterations, fli_fluid, fli_part, fli_part_base, fli_part_stack):
+    blocks = []
+
+    def __init__(self, name, input_dir, output_dir, np, size, ab_size, iterations, fli_fluid, fli_part, fli_part_base, fli_part_stack, eli_case):
         super().__init__(name, input_dir, output_dir, np, size, ab_size, iterations)
         self.fli_fluid = fli_fluid
         self.fli_part  = fli_part
         self.fli_part_base = fli_part_base
         self.fli_part_stack = fli_part_stack
+        self.eli_case = eli_case
 
     def create(self):
         super().create()
@@ -174,11 +179,41 @@ class FractionalImbalance(Experiment):
         # Change fli fluid parameters
         # Create RBC.plt based on fli
 
-    def fli_create_part(self):
-        """ Create the RBC.pos files """
 
-        self.write_to_config("benchmark", "FLIpart", self.fli_part)
+    def fli_part_stacked(self):
+        si = np.array(self.size).argmax()
 
+        total = self.fli_part_base * self.np
+        peak = (int(self.fli_part_base * (self.fli_part + 1)), int(self.np * .1))
+        base = int((total - (peak[0] * peak[1])) / (self.np - peak[1]))
+        left = total - (base * (self.np - peak[1]) + (peak[0] * peak[1]))
+        RBCs = []
+        
+
+        if self.eli_case == 3:
+            for b in self.blocks:
+                for _ in range(b[3]):
+                    RBCs.append(f"{b[0]/2 + 5:.1f} {b[1]/2 + 5:.1f} {b[2]/2 + 5:.1f} 0 0 0\n")
+
+        else:
+            i = 0
+            for b in self.blocks:
+                if i < peak[1]:
+                    n = peak[0]
+                else:
+                    n = base
+                    if i - peak[1] < left:
+                        n = n + 1
+
+                print(b)
+                for _ in range(n):
+                    RBCs.append(f"{b[0]/2 + 5:.1f} {b[1]/2 + 5:.1f} {b[2]/2 + 5:.1f} 0 0 0\n")
+
+                i = i + 1
+
+        return RBCs
+
+    def fli_part_non_stacked(self):
         primes = prime_factors(self.np) 
         pr = [1,1,1]
 
@@ -195,75 +230,69 @@ class FractionalImbalance(Experiment):
         peak = (int(self.fli_part_base * (self.fli_part + 1)), int(self.np * .1))
         base = int((total - (peak[0] * peak[1])) / (self.np - peak[1]))
         left = total - (base * (self.np - peak[1]) + (peak[0] * peak[1]))
-
         RBCs = []
 
-        # Create RBC array if RBCs are stacked
-        if self.fli_part_stack:
-            i = 0
-            for x in range(pr[0]):
-                for y in range(pr[1]):
-                    for z in range(pr[2]):
-                        if i < peak[1]:
-                            n = peak[0]
-                        else:
-                            n = base
-                            if i - peak[1] < left:
-                                n = n + 1
-                        for _ in range(n):
-                            RBCs.append(f"{0.5 * x * ab_size[0] + 5:.1f} {0.5 * y * ab_size[1] + 5:.1f} {0.5 * z * ab_size[2] + 5:.1f} 0 0 0\n")
+        l_index = np.argsort(self.size)
+        max_cells = [int((self.ab_size[0] - 10) / (self.RBC_size[0] * 2)), 
+                     int((self.ab_size[1] - 5)  / (self.RBC_size[1] * 2)), 
+                     int((self.ab_size[2] - 10) / (self.RBC_size[2] * 2))] 
 
-                        i = i + 1
-        else:
-            l_index = np.argsort(self.size)
-            max_cells = [int((self.ab_size[0] - 10) / (self.RBC_size[0] * 2)), 
-                         int((self.ab_size[1] - 5)  / (self.RBC_size[1] * 2)), 
-                         int((self.ab_size[2] - 10) / (self.RBC_size[2] * 2))] 
+        i = 0
+        # Loop through each process
+        for x in range(pr[0]):
+            for y in range(pr[1]):
+                for z in range(pr[2]):
+                    if i < peak[1]:
+                        n = peak[0]
+                    else:
+                        n = base
+                        if i - peak[1] < left:
+                            n = n + 1
 
-            i = 0
-            # Loop through each process
-            for x in range(pr[0]):
-                for y in range(pr[1]):
-                    for z in range(pr[2]):
-                        if i < peak[1]:
-                            n = peak[0]
-                        else:
-                            n = base
-                            if i - peak[1] < left:
-                                n = n + 1
+                    if i < peak[1]:
+                        n = peak[0]
+                    else:
+                        n = base
+                        if i - peak[1] < left:
+                            n = n + 1
+                    i = i + 1
 
-                        if i < peak[1]:
-                            n = peak[0]
-                        else:
-                            n = base
-                            if i - peak[1] < left:
-                                n = n + 1
-                        i = i + 1
+                    num_cells = n
 
-                        num_cells = n
+                    if num_cells > max_cells[0] * max_cells[1] * max_cells[2]:
+                        print("WARNING: Atomic-block not large enough for number of cells")
 
-                        if num_cells > max_cells[0] * max_cells[1] * max_cells[2]:
-                            print("WARNING: Atomic-block not large enough for number of cells")
-
-                        ic = 0
-                        offset = [0.5 * x * ab_size[0] + 10, 0.5 * y * ab_size[1] + 5, 0.5 * z * ab_size[2] + 10]
+                    ic = 0
+                    offset = [0.5 * x * ab_size[0] + 10, 0.5 * y * ab_size[1] + 5, 0.5 * z * ab_size[2] + 10]
 
 
-                        # Loop through each cell in a AB
-                        for ix in range(max_cells[0]):
-                            for iy in range(max_cells[1]):
-                                for iz in range(max_cells[2]):
-                                    l_offset = [ix * RBC_size[0], iy * RBC_size[1], iz * RBC_size[2]]
-                                    RBCs.append(f"{offset[0] + l_offset[0]:.1f} {offset[1] + l_offset[1]:.1f} {offset[2] + l_offset[2]:.1f} 0 0 0\n")
-                                    ic += 1
-                                    if ic == num_cells:
-                                        break
-
+                    # Loop through each cell in a AB
+                    for ix in range(max_cells[0]):
+                        for iy in range(max_cells[1]):
+                            for iz in range(max_cells[2]):
+                                l_offset = [ix * RBC_size[0], iy * RBC_size[1], iz * RBC_size[2]]
+                                RBCs.append(f"{offset[0] + l_offset[0]:.1f} {offset[1] + l_offset[1]:.1f} {offset[2] + l_offset[2]:.1f} 0 0 0\n")
+                                ic += 1
                                 if ic == num_cells:
                                     break
 
                             if ic == num_cells:
                                 break
+
+                        if ic == num_cells:
+                            break
+
+    def fli_create_part(self):
+        """ Create the RBC.pos files """
+
+        self.write_to_config("benchmark", "FLIpart", self.fli_part)
+
+
+        # Create RBC array if RBCs are stacked
+        if self.fli_part_stack:
+            RBCs = self.fli_part_stacked()
+        else:
+            RBCs = self.fli_part_non_stacked()
 
 
         RBCs.insert(0, f"{len(RBCs)}\n")
@@ -272,11 +301,65 @@ class FractionalImbalance(Experiment):
         f.write("".join(RBCs))
         f.close()
 
+
+    def fli_create_blocks(self):
+        primes = prime_factors(self.np) 
+        pr = [1,1,1]
+
+        i = 0
+        primes.reverse()
+        for x in primes:
+            pr[i] = pr[i] * x
+            i = (i + 1) % 3
+
+        ab_size  = self.ab_size
+
+        si = np.array(self.size).argmax()
+        ab_size_large = list(ab_size)
+        ab_size_large[si] = int(ab_size_large[si] * (self.fli_fluid + 1))
+        
+        v_large = ab_size_large[0]/2 * ab_size_large[1]/2 * ab_size_large[2]/2
+        RBCs_large = int((v_large / 100 * self.fli_part_base) / RBC_VOLUME)
+
+        ab_size_small = list(ab_size)
+        ab_size_small[si] = int((self.size[si] - ab_size_large[si]) / (pr[si] - 1))
+        v_small = ab_size_small[0]/2 * ab_size_small[1]/2 * ab_size_small[2]/2
+        RBCs_small = int((v_small / 100 * self.fli_part_base) / RBC_VOLUME)
+
+        pr_cpy = [pr[0], pr[1], pr[2]]
+        pr_cpy[si] = 1
+
+        x = 0
+        y = 0
+        z = 0
+
+        for xi in range(pr_cpy[0]):
+            for yi in range(pr_cpy[1]):
+                for zi in range(pr_cpy[2]):
+                    self.blocks.append((xi * ab_size_large[0], yi * ab_size_large[1], zi * ab_size_large[2], RBCs_large))
+
+        tmp = [0,0,0]
+        tmp[si] = 1
+        pr_cpy = [pr[0], pr[1], pr[2]]
+        pr_cpy[si] = pr[si] - 1
+        for xi in range(pr_cpy[0]):
+            for yi in range(pr_cpy[1]):
+                for zi in range(pr_cpy[2]):
+                    self.blocks.append(((xi * ab_size_small[0]) + (tmp[0] * ab_size_large[0]),
+                                        (yi * ab_size_small[1]) + (tmp[1] * ab_size_large[1]),
+                                        (zi * ab_size_small[2]) + (tmp[2] * ab_size_large[2]),
+                                        RBCs_small))
+
+
+
+
     def fli(self):
         """ Update the config and create RBC set fli"""
 
         #FLI fluid
         self.write_to_config("benchmark", "FLIfluid", self.fli_fluid)
+
+        self.fli_create_blocks()
 
         #skip rest if not fli_part set
         if self.fli_part is None:
@@ -288,10 +371,10 @@ class FractionalImbalance(Experiment):
 
 
     @classmethod
-    def from_experiment(cls, exp, fli_fluid, fli_part, fli_part_base, fli_part_stack):
+    def from_experiment(cls, exp, fli_fluid, fli_part, fli_part_base, fli_part_stack, eli_case):
         return cls(exp.name, exp.input_dir, exp.output_dir, 
                    exp.np, exp.size, exp.ab_size, exp.iterations, 
-                   fli_fluid, fli_part, fli_part_base, fli_part_stack)
+                   fli_fluid, fli_part, fli_part_base, fli_part_stack, eli_case)
 
     @classmethod
     def from_args(cls, parser):
@@ -299,7 +382,7 @@ class FractionalImbalance(Experiment):
 
         obj = Experiment.from_args(parser)
 
-        return cls.from_experiment(obj, parser.fli_fluid, parser.fli_part, parser.fli_part_base, parser.fli_part_stack)
+        return cls.from_experiment(obj, parser.fli_fluid, parser.fli_part, parser.fli_part_base, parser.fli_part_stack, parser.ELI_case)
 
 
 def main():
@@ -316,6 +399,7 @@ def main():
     parser.add_argument("--fli_part", type=float, help="Fractional imbalance part", default=0)
     parser.add_argument("--fli_part_base", type=int, help="Fractional imbalance part", default=0)
     parser.add_argument("--fli_part_stack", type=bool, help="If true RBCs are stacked", default=False)
+    parser.add_argument("--ELI_case", type=int, help="Case type from embracing load imbalance paper cases", default=1)
 
     #Still need to setup
     parser.add_argument("-v", "--log", type=str, help="Loggin level=[DEBUG,INFO,WARNING,ERROR,CRITICAL]", default="WARNING")
