@@ -205,7 +205,6 @@ class FractionalImbalance(Experiment):
                     if i - peak[1] < left:
                         n = n + 1
 
-                print(b)
                 for _ in range(n):
                     RBCs.append(f"{b[0]/2 + 5:.1f} {b[1]/2 + 5:.1f} {b[2]/2 + 5:.1f} 0 0 0\n")
 
