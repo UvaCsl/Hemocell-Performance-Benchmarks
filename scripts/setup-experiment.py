@@ -101,10 +101,19 @@ class Experiment:
         if not self.ab_size is None:
             return
 
-        primes = prime_factors(self.size[0] * self.size[1] * self.size[2]) 
-        self.ab_size[0] = self.size[0] / primes[0]
-        self.ab_size[1] = self.size[1] / primes[1]
-        self.ab_size[2] = self.size[2] / primes[2]
+        self.ab_size = [0, 0, 0]
+        primes = prime_factors(self.np) 
+        pr = [1,1,1]
+
+        i = 0
+        primes.reverse()
+        for x in primes:
+            pr[i] = pr[i] * x
+            i = (i + 1) % 3
+
+        self.ab_size[0] = self.size[0] / pr[0]
+        self.ab_size[1] = self.size[1] / pr[1]
+        self.ab_size[2] = self.size[2] / pr[2]
 
 
     def set_size(self):
@@ -202,15 +211,16 @@ class FractionalImbalance(Experiment):
                             if i - peak[1] < left:
                                 n = n + 1
                         for _ in range(n):
-                            RBCs.append(f"{0.5 * x * ab_size[0] + self5:.1f} {0.5 * y * ab_size[1] + 5:.1f} {0.5 * z * ab_size[2] + 5:.1f} 0 0 0\n")
+                            RBCs.append(f"{0.5 * x * ab_size[0] + 5:.1f} {0.5 * y * ab_size[1] + 5:.1f} {0.5 * z * ab_size[2] + 5:.1f} 0 0 0\n")
 
                         i = i + 1
         else:
             l_index = np.argsort(self.size)
-            max_cells = [int((self.ab_size[0] - 5.0) / self.RBC_size[0]), 
-                         int((self.ab_size[1] - 2.5) / self.RBC_size[1]), 
-                         int((self.ab_size[2] - 5.0) / self.RBC_size[2])] 
+            max_cells = [int((self.ab_size[0] - 10) / (self.RBC_size[0] * 2)), 
+                         int((self.ab_size[1] - 5)  / (self.RBC_size[1] * 2)), 
+                         int((self.ab_size[2] - 10) / (self.RBC_size[2] * 2))] 
 
+            i = 0
             # Loop through each process
             for x in range(pr[0]):
                 for y in range(pr[1]):
@@ -221,6 +231,14 @@ class FractionalImbalance(Experiment):
                             n = base
                             if i - peak[1] < left:
                                 n = n + 1
+
+                        if i < peak[1]:
+                            n = peak[0]
+                        else:
+                            n = base
+                            if i - peak[1] < left:
+                                n = n + 1
+                        i = i + 1
 
                         num_cells = n
 
@@ -238,7 +256,6 @@ class FractionalImbalance(Experiment):
                                     l_offset = [ix * RBC_size[0], iy * RBC_size[1], iz * RBC_size[2]]
                                     RBCs.append(f"{offset[0] + l_offset[0]:.1f} {offset[1] + l_offset[1]:.1f} {offset[2] + l_offset[2]:.1f} 0 0 0\n")
                                     ic += 1
-
                                     if ic == num_cells:
                                         break
 
@@ -247,7 +264,6 @@ class FractionalImbalance(Experiment):
 
                             if ic == num_cells:
                                 break
-            
 
 
         RBCs.insert(0, f"{len(RBCs)}\n")
