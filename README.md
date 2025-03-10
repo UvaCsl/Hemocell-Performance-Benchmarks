@@ -1,4 +1,6 @@
 # Hemocell-Performance-Benchmarks
+[![DOI](https://zenodo.org/badge/696734720.svg)](https://doi.org/10.5281/zenodo.15003101)
+
 A repository to keep track of Hemocell performance benchmarks
 
 For more information on Hemocell please go to [hemocell.eu](https://hemocell.eu/)
