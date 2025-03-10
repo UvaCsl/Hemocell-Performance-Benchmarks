@@ -191,17 +191,20 @@ int main(int argc, char *argv[])
   /* If a FLIfluid is set, we increase the size of the of blocks with x=0 to match requested fli.  */
   if (FLIfluid != 0.0){
     if (newRepartition[0] >= newRepartition[1] & newRepartition[0] >= newRepartition[2]){
-      plint nSizeX = (nx / newRepartition[0]) * (FLIfluid + 1);
-      createBlocks(&sb,        0, 0, 0, nSizeX,      ny, nz, 1,                     newRepartition[1], newRepartition[2]);
+      plint nSizeX = float(nx / newRepartition[0]) * (FLIfluid + 1);
+      hlog << "nx " << nx << std::endl;
+      hlog << "nr " << newRepartition[0] << std::endl;
+      hlog << "nSizeX: " << nSizeX << std::endl;
+      hlog << "flifluid: " << FLIfluid << std::endl;
+      createBlocks(&sb,      0, 0, 0, nSizeX,      ny, nz,                     1, newRepartition[1], newRepartition[2]);
       createBlocks(&sb, nSizeX, 0, 0, nx - nSizeX, ny, nz, newRepartition[0] - 1, newRepartition[1], newRepartition[2]);
-
     } else if (newRepartition[1] >= newRepartition[0] & newRepartition[1] >= newRepartition[2]){
       plint nSizeY = (ny / newRepartition[1]) * (FLIfluid + 1);
-      createBlocks(&sb, 0, 0, 0, nx, nSizeY, nz, newRepartition[0], 1, newRepartition[2]);
+      createBlocks(&sb, 0,      0, 0, nx,      nSizeY, nz, newRepartition[0],                     1, newRepartition[2]);
       createBlocks(&sb, 0, nSizeY, 0, nx, ny - nSizeY, nz, newRepartition[0], newRepartition[1] - 1, newRepartition[2]);
     } else {
       plint nSizeZ = (nz / newRepartition[2]) * (FLIfluid + 1);
-      createBlocks(&sb, 0, 0, 0, nx, ny, nSizeZ, newRepartition[0], newRepartition[1], 1);
+      createBlocks(&sb, 0, 0,      0, nx, ny,      nSizeZ, newRepartition[0], newRepartition[1],                     1);
       createBlocks(&sb, 0, 0, nSizeZ, nx, ny, nz - nSizeZ, newRepartition[0], newRepartition[1], newRepartition[2] - 1);
     }
   } else {
@@ -244,6 +247,8 @@ int main(int argc, char *argv[])
 
   defineDynamics(*hemocell.lattice, top, new BounceBack<T, DESCRIPTOR>);
   defineDynamics(*hemocell.lattice, bottom, new BounceBack<T, DESCRIPTOR>);
+
+  //  SAFE TILL HERE
 
   // define shear velocity along top/bottom planes (z axis)
   // shear velocity given by `height * shear rate / 2`
@@ -300,6 +305,7 @@ int main(int argc, char *argv[])
       hemocell.lattice->collideAndStream();
     }
   }
+
 
   unsigned int tmax = (*cfg)["sim"]["tmax"].read<unsigned int>();
   unsigned int tmeas = (*cfg)["sim"]["tmeas"].read<unsigned int>();
