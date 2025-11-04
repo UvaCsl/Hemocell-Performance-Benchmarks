@@ -165,20 +165,24 @@ class FractionalImbalance(Experiment):
 
     blocks = []
 
-    def __init__(self, name, input_dir, output_dir, np, size, ab_size, iterations, fli_fluid, fli_part, fli_part_base, fli_part_stack, eli_case):
+    def __init__(self, name, input_dir, output_dir, np, size, ab_size, iterations, fli_fluid, fli_part, fli_part_base, fli_part_stack, eli_case, enable_tool):
         super().__init__(name, input_dir, output_dir, np, size, ab_size, iterations)
         self.fli_fluid = fli_fluid
         self.fli_part  = fli_part
         self.fli_part_base = fli_part_base
         self.fli_part_stack = fli_part_stack
         self.eli_case = eli_case
+        self.enable_tool = enable_tool
 
     def create(self):
         super().create()
         self.fli()
+        self.set_tool()
         # Change fli fluid parameters
         # Create RBC.plt based on fli
 
+    def set_tool(self):
+        self.write_to_config("benchmark", "enableTool", int(self.enable_tool))
 
     def fli_part_stacked(self):
         si = np.array(self.size).argmax()
@@ -370,10 +374,10 @@ class FractionalImbalance(Experiment):
 
 
     @classmethod
-    def from_experiment(cls, exp, fli_fluid, fli_part, fli_part_base, fli_part_stack, eli_case):
+    def from_experiment(cls, exp, fli_fluid, fli_part, fli_part_base, fli_part_stack, eli_case, enable_tool):
         return cls(exp.name, exp.input_dir, exp.output_dir, 
                    exp.np, exp.size, exp.ab_size, exp.iterations, 
-                   fli_fluid, fli_part, fli_part_base, fli_part_stack, eli_case)
+                   fli_fluid, fli_part, fli_part_base, fli_part_stack, eli_case, enable_tool)
 
     @classmethod
     def from_args(cls, parser):
@@ -381,7 +385,7 @@ class FractionalImbalance(Experiment):
 
         obj = Experiment.from_args(parser)
 
-        return cls.from_experiment(obj, parser.fli_fluid, parser.fli_part, parser.fli_part_base, parser.fli_part_stack, parser.ELI_case)
+        return cls.from_experiment(obj, parser.fli_fluid, parser.fli_part, parser.fli_part_base, parser.fli_part_stack, parser.ELI_case, parser.enable_tool)
 
 
 def main():
@@ -394,15 +398,17 @@ def main():
     parser.add_argument("-a", "--atomic_block_size", type=str, help="Size of atomic block, format=x,y,z", default=None)
     parser.add_argument("-e", "--experiment", type=str, help="Name of the experiment", default="cube")
     parser.add_argument("-t", "--iterations", type=int, help="Number of iterations", default=1)
-    parser.add_argument("--fli_fluid", type=float, help="Fractional imbalance fluid", default=None)
-    parser.add_argument("--fli_part", type=float, help="Fractional imbalance part", default=0)
+    # parser.add_argument("-c", "--copy-RBC", type=int, help="copy the RBC.pos file instead of gen (overwrite fli_part_*", default=0)
+    parser.add_argument("--fli_fluid", type=float, help="Fractional imbalance fluid", default=0)
+    parser.add_argument("--fli_part", type=float, help="Fractional imbalance part", default=None)
     parser.add_argument("--fli_part_base", type=int, help="Fractional imbalance part", default=0)
     parser.add_argument("--fli_part_stack", type=bool, help="If true RBCs are stacked", default=False)
     parser.add_argument("--ELI_case", type=int, help="Case type from embracing load imbalance paper cases", default=1)
+    parser.add_argument("--enable_tool", type=int, help="Enable the load balancing tool", default=0)
 
     #Still need to setup
     parser.add_argument("-v", "--log", type=str, help="Loggin level=[DEBUG,INFO,WARNING,ERROR,CRITICAL]", default="WARNING")
-
+  
     args = parser.parse_args()
 
     exp = FractionalImbalance.from_args(args)
