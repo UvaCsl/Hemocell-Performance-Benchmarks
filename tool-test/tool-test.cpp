@@ -10,7 +10,7 @@ corresponding paper: https://doi.org/10.3389/fphys.2017.00563
 
 The HemoCell library is free software: you can redistribute it and/or
 modify it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
+published by the Free Software Foundation, either version 4 of the
 License, or (at your option) any later version.
 
 The library is distributed in the hope that it will be useful,
@@ -39,7 +39,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /* **************************************************************************************
  * Empty macros, if user instrumentation is disabled
  * *************************************************************************************/
-#define SCOREP_USER_REGION_BEGIN(handle, name, type)
+#define SCOREP_USER_REGION_BEGIN(handle, name, type) hlog << "SCOREP USER not defined" << endl;
 #define SCOREP_USER_REGION_END(handle)
 #define SCOREP_USER_REGION_DEFINE(handle)
 #define SCOREP_USER_REGION_TYPE_DYNAMIC 1
@@ -58,33 +58,21 @@ using namespace hemo;
 
 map<plint, plint> BlockToMpi;
 
-void setFreq(){
-#ifdef SCOREP_USER_ENABLE
-    hlog << "USER eneabled" << std::endl;
-#else // SCOREP_USER_ENABLE
-    hlog << "USER disabled" << std::endl;
-#endif
-    // Example shell command: listing files in the current directory
-    const char* command = "likwid-setFrequencies -f 1.5";
-    hlog << "setFreq" << std::endl;
+#include <mytool.h>
 
-    MPI_Comm new_comm;
-    MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &new_comm);
+float perf_model(float V, float RBCs){
+    RBCs = RBCs;
+    float fluid = (0.007965768126115606 + V * 2.5082866244023706 * std::pow(10,-7)) + 
+                  (-0.0002188578044320071 + V * 2.1235687904379402 * std::pow(10,-8));
 
-    //// Get the rank of this current process
-    int rank;
-    MPI_Comm_rank(new_comm, &rank);
-    //int rank = 0;
+    float RBC = (9.24827169270812*std::pow(10,-5) + RBCs * 3.599652199729481 * std::pow(10,-5)) +
+                (0.0005929407189597003 + RBCs * 8.153308088650628 * std::pow(10, -5)) +
+                (-4.432855061471974 * std::pow(10,-5) *  RBCs * 2.826877556655128 * std::pow(10, -5)) +
+                (2.095287766730597 * std::pow(10,-5) + RBCs * 7.4864373485193265 * std::pow(10,-6)) + 
+                (0.0012118130950354064 + RBCs * 0.00025403341035855966) + 
+                (0.0003094544304245024 + RBCs * 4.183950985174891 * std::pow(10, -5));
 
-    if (rank == 0){
-        int result = system(command);
-        // Check if the command was successful
-        if (result == 0) {
-            hlog << "Command executed successfully!" << std::endl;
-        } else {
-            hlog << "Command execution failed!" << std::endl;
-        }
-    }
+    return 4*RBC + fluid;
 }
 
 void initializeLattice(HemoCell hemocell, Config *cfg)
@@ -143,6 +131,13 @@ int main(int argc, char *argv[])
   bool writeOutput = 1;
   try {
     writeOutput = (*cfg)["benchmark"]["writeOutput"].read<int>();
+  }
+  catch (...) {}
+
+  bool enableTool = 0;
+  try {
+    enableTool = (*cfg)["benchmark"]["enableTool"].read<int>();
+    hlog << "Enable Tool: " << enableTool << endl;
   }
   catch (...) {}
 
@@ -346,18 +341,67 @@ int main(int argc, char *argv[])
        << ncells * 77.0 * 100 / (nx * ny * nz) << endl;
   hlog << "(main)   nCells (global) = " << ncells << endl;
 
+  // Get the rank of the process
+  int world_rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+
+  tool::TS ts(world_rank);
+
   SCOREP_USER_REGION_DEFINE(my_region)
-  SCOREP_USER_REGION_BEGIN(my_region, "iteration-bin", SCOREP_USER_REGION_TYPE_DYNAMIC)
+  SCOREP_USER_REGION_BEGIN(my_region, "Tool-phase", SCOREP_USER_REGION_TYPE_DYNAMIC)
 
   while (hemocell.iter < tmax)
   {
-    hemocell.iterate();
 
-    if (hemocell.iter % bin_size == 0 && hemocell.iter != 0)
+    if (hemocell.iter == 0)
     {
       SCOREP_USER_REGION_END(my_region)
-      SCOREP_USER_REGION_BEGIN(my_region, "iteration-bin", SCOREP_USER_REGION_TYPE_DYNAMIC)
+      SCOREP_USER_REGION_BEGIN(my_region, "Tool-phase", SCOREP_USER_REGION_TYPE_DYNAMIC)
+
+      if (enableTool) {
+
+          hlog << "using the tool" << endl;
+
+          int RBCs, size;
+          RBCs = size = 0;
+
+          // Warning: Time measurements will be inaccurate
+          // RBCs += (float)hemocell.cellfields->immersedParticles->getComponent(blockId).particles.size();
+          for (const plint &blockId : hemocell.lattice->getMultiBlockManagement().getLocalInfo().getBlocks())
+          {
+            // Warning: Time measurements will be inaccurate
+            int Nx = hemocell.lattice->getComponent(blockId).getNx();
+            int Ny = hemocell.lattice->getComponent(blockId).getNy();
+            int Nz = hemocell.lattice->getComponent(blockId).getNz();
+            size += Nx * Ny * Nz;
+          }
+
+          CellInformationFunctionals::info_per_cell.clear(); //TODO thread safe n such
+          CellInformationFunctionals::calculateCellPosition(&hemocell); 
+          CellInformationFunctionals::calculateCellType(&hemocell);
+          pluint localCells = 0;
+          HemoCell* hemocell2 = &hemocell;
+          for (const auto & pair : CellInformationFunctionals::info_per_cell) {
+            const CellInformation & cinfo = pair.second;
+            if (cinfo.centerLocal && (cinfo.cellType == (*hemocell2->cellfields)["RBC"]->ctype)) {
+              localCells++;
+            }
+          }
+          CellInformationFunctionals::info_per_cell.clear();
+
+          RBCs = localCells;
+
+          float wl = perf_model((float)size, (float)RBCs);
+
+          // cout << "size: " << size << " RBCs: " << RBCs << " model: " << wl << endl;
+          
+          ts.exec(wl);
+
+          hlog << "Tool done" << endl;
+      }
     }
+
+    hemocell.iterate();
 
     if (hemocell.iter % tmeas == 0)
     {
@@ -378,9 +422,9 @@ int main(int argc, char *argv[])
     }
 
     //Call set freq halfway through the run
-    if (int(tmax / 2) == int(hemocell.iter)){
-        setFreq();
-    }
+    //if (int(tmax / 2) == int(hemocell.iter)){
+        //setFreq();
+    //}
   }
 
   SCOREP_USER_REGION_END(my_region)
@@ -437,6 +481,12 @@ int main(int argc, char *argv[])
 
   hemo::global.statistics.printStatistics();
   hemo::global.statistics.outputStatistics(128);
+
+  if(enableTool){
+    ts.write_output();
+  }
+
+  
 
   WRITE_OUTPUT()
 

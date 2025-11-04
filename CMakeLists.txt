@@ -8,3 +8,6 @@ add_subdirectory("stent-strut-wall-stent")
 add_subdirectory("stent-strut-casper")
 add_subdirectory("fractional-imbalance")
 add_subdirectory("tool-test")
+add_subdirectory("pipeflow-tool")
+add_subdirectory("cubeflow")
+

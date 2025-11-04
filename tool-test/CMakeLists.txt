@@ -12,3 +12,7 @@ add_executable(${EXEC_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/${MAIN}.cpp")
 # link the executable to `hemocell` and `HDF5` dependencies
 target_link_libraries(${EXEC_NAME} ${PROJECT_NAME})
 target_link_libraries(${EXEC_NAME} ${HDF5_C_HL_LIBRARIES} ${HDF5_LIBRARIES})
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/home/jvandijk/HemoCell-mpi-2/Hemocell-Performance-Benchmarks/tool-test/Tool/build/install/include")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L/home/jvandijk/HemoCell-mpi-2/Hemocell-Performance-Benchmarks/tool-test/Tool/build/install/lib")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lmytool")

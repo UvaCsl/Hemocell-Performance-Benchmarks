@@ -36,6 +36,7 @@
 <benchmark>
     <binSize> 200 </binSize>
     <writeOutput> 0 </writeOutput>
+    <enableTool> 1 </enableTool>
 </benchmark>
 
 </hemocell>
