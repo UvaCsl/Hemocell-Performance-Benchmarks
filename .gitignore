@@ -250,3 +250,6 @@ tags
 cube-imbalance-domain-decomp/cube-imbalance-domain-decomp
 cube-benchmark/cube-benchmark
 cube-benchmark/cube-fractional-imbalance
+
+CMakeFiles
+tool-test/Tool
